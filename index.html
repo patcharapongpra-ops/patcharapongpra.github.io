@@ -329,41 +329,69 @@
     formData.WAN2_IP_Customer = stripSubnet(formData.WAN2_IP_CustomerSUB2);
     formData.LAN_IP_Gateway = getGateway(formData.LAN_IP_Network);
 
-    // WAN base + offset
-    if (formData.WAN_IP_Network) {
-      let { ip: baseIp, cidr: wanCidr } = parseIpCidr(formData.WAN_IP_Network);
-      if (baseIp) {
-        const isSwitch = (deviceType === "huawei-switch");
-        formData.Wan_IP_Customer_RT = addToIp(baseIp, isSwitch ? 6 : 3);
-        formData.WAN_IP_MAIN       = addToIp(baseIp, 1);
-        formData.WAN_IP_PROTECTION = addToIp(baseIp, 2);
+   // WAN base + offset
+if (formData.WAN_IP_Network) {
+  let { ip: baseIp, cidr: wanCidr } = parseIpCidr(formData.WAN_IP_Network);
+  if (baseIp) {
+    const isSwitch = (deviceType === "huawei-switch");
+    // Router: +3, Switch: +6
+    formData.Wan_IP_Customer_RT  = addToIp(baseIp, isSwitch ? 6 : 3);
+    formData.WAN_IP_MAIN         = addToIp(baseIp, 1);
+    formData.WAN_IP_PROTECTION   = addToIp(baseIp, 2);
 
-        // Cisco: สร้างรูปแบบ IP + mask
-        const wanMask = cidrToMask(wanCidr);
-        formData.WAN_IP_Network_mask   = wanMask ? `${baseIp} ${wanMask}` : "";
-        formData.Wan_IP_Customer_RT_mask = (formData.Wan_IP_Customer_RT && wanMask) ? `${formData.Wan_IP_Customer_RT} ${wanMask}` : "";
-      } else {
-        formData.Wan_IP_Customer_RT = ""; formData.Wan_IP_Customer_RT_mask = "";
-        formData.WAN_IP_MAIN = ""; formData.WAN_IP_PROTECTION = ""; formData.WAN_IP_Network_mask = "";
-      }
-    } else {
-      formData.Wan_IP_Customer_RT = ""; formData.Wan_IP_Customer_RT_mask = "";
-      formData.WAN_IP_MAIN = ""; formData.WAN_IP_PROTECTION = ""; formData.WAN_IP_Network_mask = "";
-    }
+    // สร้าง mask จาก CIDR
+    const wanMask = cidrToMask(wanCidr);
+    formData.WAN_IP_Network_mask = wanMask ? `${baseIp} ${wanMask}` : "";
 
-    // Cisco: LAN network + mask
-    if (formData.LAN_IP_Network) {
-      let { ip: lanBase, cidr: lanCidr } = parseIpCidr(formData.LAN_IP_Network);
-      const lanMask = cidrToMask(lanCidr);
-      formData.LAN_IP_Network_mask = (lanBase && lanMask) ? `${lanBase} ${lanMask}` : "";
-    } else { formData.LAN_IP_Network_mask = ""; }
+    // สำหรับ Switch (ใช้ใน interface Vlanif${formData.VLAN})
+    formData.WAN_IP_Mask = wanMask || "";
+    formData.Wan_IP_Customer_RT_withMask =
+      (formData.Wan_IP_Customer_RT && wanMask)
+        ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
+        : formData.Wan_IP_Customer_RT;
 
-    // Cisco: LAN gateway ip + mask
-    if (formData.LAN_IP_Gateway) {
-      let { ip: lanGwIp, cidr: lanGwCidr } = parseIpCidr(formData.LAN_IP_Gateway);
-      const lanGwMask = cidrToMask(lanGwCidr);
-      formData.LAN_IP_Gateway_mask = (lanGwIp && lanGwMask) ? `${lanGwIp} ${lanGwMask}` : "";
-    } else { formData.LAN_IP_Gateway_mask = ""; }
+    // สำหรับ Cisco (คงรูปแบบเดิม)
+    formData.Wan_IP_Customer_RT_mask =
+      (formData.Wan_IP_Customer_RT && wanMask)
+        ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
+        : "";
+  } else {
+    formData.Wan_IP_Customer_RT = "";
+    formData.Wan_IP_Customer_RT_mask = "";
+    formData.WAN_IP_MAIN = "";
+    formData.WAN_IP_PROTECTION = "";
+    formData.WAN_IP_Network_mask = "";
+    formData.WAN_IP_Mask = "";
+    formData.Wan_IP_Customer_RT_withMask = "";
+  }
+} else {
+  formData.Wan_IP_Customer_RT = "";
+  formData.Wan_IP_Customer_RT_mask = "";
+  formData.WAN_IP_MAIN = "";
+  formData.WAN_IP_PROTECTION = "";
+  formData.WAN_IP_Network_mask = "";
+  formData.WAN_IP_Mask = "";
+  formData.Wan_IP_Customer_RT_withMask = "";
+}
+
+// Cisco: LAN network + mask
+if (formData.LAN_IP_Network) {
+  let { ip: lanBase, cidr: lanCidr } = parseIpCidr(formData.LAN_IP_Network);
+  const lanMask = cidrToMask(lanCidr);
+  formData.LAN_IP_Network_mask = (lanBase && lanMask) ? `${lanBase} ${lanMask}` : "";
+} else {
+  formData.LAN_IP_Network_mask = "";
+}
+
+// Cisco: LAN gateway ip + mask
+if (formData.LAN_IP_Gateway) {
+  let { ip: lanGwIp, cidr: lanGwCidr } = parseIpCidr(formData.LAN_IP_Gateway);
+  const lanGwMask = cidrToMask(lanGwCidr);
+  formData.LAN_IP_Gateway_mask = (lanGwIp && lanGwMask) ? `${lanGwIp} ${lanGwMask}` : "";
+} else {
+  formData.LAN_IP_Gateway_mask = "";
+}
+
 
     // Nodes & descriptions
     const mainParsed = parseNode(formData.Name_main_raw);
@@ -682,7 +710,7 @@ install feature-software WEAKEA
 
 syst
 
-sysname :[${formData.Cxxx}]:RT_${formData.RT_Name}                                 
+sysname :[${formData.Cxxx}]:SW_${formData.RT_Name}                                 
 
 vlan batch 124 ${formData.VLAN}
 
@@ -721,7 +749,7 @@ info-center loghost source LoopBack1
 vlan 124
  name MGMT
 vlan ${formData.VLAN}
- name ":[${formData.Cxxx}]:RT_${formData.RT_Name}"
+ name ":[${formData.Cxxx}]:${formData.RT_Name}"
 q
 
 radius-server template Jastel-Radius-Sv
@@ -769,7 +797,7 @@ interface Vlanif124
 q
 
 interface Vlanif${formData.VLAN}
- ip address ${formData.Wan_IP_Customer_RT} 
+ ip address ${formData.Wan_IP_Customer_RT_withMask}
 q
 
 interface GE 1/0/1
