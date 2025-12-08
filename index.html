@@ -423,10 +423,6 @@ if (formData.LAN_IP_Gateway) {
   // ===== HUAWEI ROUTER =====
   function buildHuaweiRouterConfig(formData, hasProtect) {
     return `
-Huawei@123
-
-Huawei@123
-
 
 clock timezone TH add 07:00:00	
 
@@ -573,6 +569,7 @@ q
 
 interface Vlanif${formData.VLAN}
  ip address ${formData.Wan_IP_Customer_RT} 29
+ traffic-policy GRAPH-INTER inbound
 q
 
 interface 10GE0/0/0
@@ -581,25 +578,32 @@ interface 10GE0/0/0
  set flow-stat interval 30
  port link-type trunk
  port trunk allow-pass vlan 124 ${formData.VLAN}
- device transceiver 1000BASE-X${hasProtect ? `
+ device transceiver 1000BASE-X
+ y
+ 
+ ${hasProtect ? `
 interface 10GE0/0/1
  portswitch
  description ${formData.DES2_built}
  set flow-stat interval 30
  port link-type trunk
  port trunk allow-pass vlan 124 ${formData.VLAN}
- device transceiver 1000BASE-X` : ""}
+ device transceiver 1000BASE-X
+ y
+ ` : ""}
 
 nqa test-instance ${formData.Name_main_only} 1
  test-type icmp
  destination-address ipv4 ${formData.WAN1_IP_NODE}
  source-address ipv4 ${formData.WAN1_IP_Customer}
+ vpn-instance __dcn_vpn__
  frequency 30
  start now${hasProtect ? `
 nqa test-instance ${formData.Name_Protection_only} 2
  test-type icmp
  destination-address ipv4 ${formData.WAN2_IP_NODE}
  source-address ipv4 ${formData.WAN2_IP_Customer}
+ vpn-instance __dcn_vpn__
  frequency 30
  start now` : ""}
 q
