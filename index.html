@@ -309,12 +309,25 @@
     }
     // ตัด prefix + ลบ # สำหรับชื่อ node
     function normalizeNodeName(raw) {
-      if (!raw) return "";
-      let name = raw.trim();
-      const patterns = [/^CX600_/i,/^JT-SW2-CX_/i,/^JT-SW1-CX_/i,/^JT-M4-,/^ATN950B_,/^ATN910C_/i];
-      patterns.forEach(re => name = name.replace(re,""));
-      return name.replace(/#/g,"");
-    }
+  if (!raw) return "";
+  let name = raw.trim();
+
+  const patterns = [
+    /^CX600_/i,
+    /^JT-SW2-CX_/i,
+    /^JT-SW1-CX_/i,
+    /^JT-M4-/i,
+    /^ATN950B_/i,
+    /^ATN910C_/i
+  ];
+
+  patterns.forEach(re => {
+    name = name.replace(re, "");
+  });
+
+  // ลบ # ทุกตัว เช่น TSM#2 -> TSM2
+  return name.replace(/#/g, "");
+}
     function parseNode(raw){ if(!raw) return {node:"",iface:""}; let p=raw.trim().split(/\s+/); return {node:p[0]||"",iface:p[1]||""}; }
     function buildDescriptionFromParsed(p){ if(!p.node||!p.iface) return ""; return `[NODE]:TO:[${p.node}]<VIA>[JAS]:[${p.iface}]`; }
 
