@@ -479,6 +479,8 @@ telnet server enable
 
 telnet server acl 2000
 
+ssh server acl 2000
+
 stelnet server enable
 
 snetconf server enable
@@ -550,12 +552,12 @@ aaa
  local-user nocjastel password irreversible-cipher Ov80ylgm]#
  local-user nocjastel privilege level 3
 y
- local-user nocjastel service-type telnet
+ local-user nocjastel service-type telnet ssh stelnet
 y
  local-user jastel password irreversible-cipher Jastel@min1234#
  local-user jastel privilege level 3
 y
- local-user jastel service-type telnet
+ local-user jastel service-type telnet ssh stelnet
 y
 q
 
