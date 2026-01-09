@@ -686,8 +686,8 @@ error-down auto-recovery cause bpdu-protection interval 300
  snmp-agent sys-info version v2c
  snmp-agent sys-info contact "${formData.Customerfullname}"
  snmp-agent target-host host-name zabbix-proxy trap address udp-domain ${formData.PROXY} vpn-instance __dcn_vpn__ udp-port 10162 params securityname +jastel+  
- snmp-agent target-host trap address udp-domain 169.254.254.40 vpn-instance __dcn_vpn__ params securityname cipher +jastel+ v2c private-netmanager
- snmp-agent target-host trap address udp-domain 169.254.254.41 vpn-instance __dcn_vpn__ params securityname cipher +jastel+ v2c private-netmanager
+ snmp-agent target-host trap address udp-domain 169.254.254.40 vpn-instance __dcn_vpn__ params securityname cipher +jastel+ v2c 
+ snmp-agent target-host trap address udp-domain 169.254.254.41 vpn-instance __dcn_vpn__ params securityname cipher +jastel+ v2c 
                            
  snmp-agent sys-info version v3 disable 
  snmp-agent trap source  LoopBack1
@@ -697,6 +697,10 @@ error-down auto-recovery cause bpdu-protection interval 300
  snmp-agent proxy protocol source-status all-interface
  snmp-agent proxy protocol source-status ipv6 all-interface
  snmp-agent 
+
+ snmp-agent notification-log enable
+ snmp-agent notification-log global-ageout 36
+ snmp-agent extend error-code enable
 
 user-interface maximum-vty 15 
 user-interface vty 0 14
