@@ -443,46 +443,54 @@
     formData.DES2_built = hasProtect ? buildDescriptionFromParsed(protParsed) : "";
 
     // ===== Preconfig Node (เพิ่มเข้า output ทุก device, โดยไม่ทำให้ output เดิมหาย) =====
-    function buildPreconfigNodeSection() {
-      const cid = (formData.Cxxx || "").trim();
-      const rt  = (formData.RT_Name || "").trim();
-      const vlanSvc = (formData.VLAN || "").trim();
-      const loop = (formData.LOOPBACK || "").trim();
-      const isPcid = /^P/i.test(cid);
+ function buildPreconfigNodeSection() {
+  const cid = (formData.Cxxx || "").trim();
+  const rt  = (formData.RT_Name || "").trim();
+  const vlanSvc = (formData.VLAN || "").trim();
+  const loop = (formData.LOOPBACK || "").trim();
+  const isPcid = /^P/i.test(cid);
 
-      const mNode = parseNode(formData.Name_main_raw);
-      const pNode = parseNode(formData.Name_Protection_raw);
+  const mNode = parseNode(formData.Name_main_raw);
+  const pNode = parseNode(formData.Name_Protection_raw);
 
-      const mNodeName = (mNode.node || "").trim();
-      const pNodeName = (pNode.node || "").trim();
-      const mIface = toNodeIface(mNode.iface || "");
-      const pIface = toNodeIface(pNode.iface || "");
+  const mNodeName = (mNode.node || "").trim();
+  const pNodeName = (pNode.node || "").trim();
+  const mIface = toNodeIface(mNode.iface || "");
+  const pIface = toNodeIface(pNode.iface || "");
 
-      const mNodeIp = stripSubnet(formData.WAN1_IP_NODE_raw);
-      const mRtIp   = stripSubnet(formData.WAN1_IP_CustomerSUB1);
-      const pNodeIp = stripSubnet(formData.WAN2_IP_NODE_raw);
-      const pRtIp   = stripSubnet(formData.WAN2_IP_CustomerSUB2);
+  const hasProtect =
+    !!(formData.Name_Protection_raw && formData.WAN2_IP_NODE_raw && formData.WAN2_IP_CustomerSUB2);
 
-      const mMask = formData.WAN1_NODE_MASK || "";
-      const pMask = formData.WAN2_NODE_MASK || "";
+  // ---- MGMT IP (optional) ----
+  const mNodeIp = stripSubnet(formData.WAN1_IP_NODE_raw);
+  const mRtIp   = stripSubnet(formData.WAN1_IP_CustomerSUB1);
+  const pNodeIp = stripSubnet(formData.WAN2_IP_NODE_raw);
+  const pRtIp   = stripSubnet(formData.WAN2_IP_CustomerSUB2);
 
-      // L3VPN only for CID starts with C (ตามที่คุณสั่ง: ถ้า P ให้ลบทิ้งทั้งก้อน)
-      const includeL3vpn = !isPcid;
+  const mMask = formData.WAN1_NODE_MASK || "";
+  const pMask = formData.WAN2_NODE_MASK || "";
 
-      // สำหรับ L3VPN: node ip = base+1/base+2, peer = customer rt ip (formData.Wan_IP_Customer_RT)
-      const wanNet = parseIpCidr(formData.WAN_IP_Network);
-      const wanMask = cidrToMask(wanNet.cidr);
-      const l3MainIp = formData.WAN_IP_MAIN || "";
-      const l3ProtIp = formData.WAN_IP_PROTECTION || "";
-      const l3PeerIp = formData.Wan_IP_Customer_RT || "";
+  // ---- L3VPN only for CID starts with C ----
+  const includeL3vpn = !isPcid;
 
-      function l3Block(nodeIf, nodeL3Ip) {
-        if (!includeL3vpn) return "";
+  const wanNet = parseIpCidr(formData.WAN_IP_Network);
+  const wanMask = cidrToMask(wanNet.cidr);
 
-        return `
+  const l3MainIp = formData.WAN_IP_MAIN || "";         // from WAN Network base+1
+  const l3ProtIp = formData.WAN_IP_PROTECTION || "";   // from WAN Network base+2
+  const l3PeerIp = formData.Wan_IP_Customer_RT || "";  // from WAN Network base+3 (router) / +6 (switch)
+
+  const descBase = `:${cid}:${rt}`;
+
+  function l3Block(nodeIf, nodeL3Ip) {
+    // ถ้าไม่เข้าเงื่อนไข C หรือข้อมูล WAN Network ไม่พอ ก็ไม่พิมพ์ L3
+    if (!includeL3vpn) return "";
+    if (!vlanSvc || !nodeIf || !nodeL3Ip || !wanMask || !l3PeerIp) return "";
+
+    return `
 #
 ip vpn-instance ${vlanSvc}
- description :${cid}:${rt}
+ description :${cid}:INEXT/${rt}
  ipv4-family
   route-distinguisher 65423:${vlanSvc}
   apply-label per-route
@@ -492,7 +500,7 @@ ip vpn-instance ${vlanSvc}
 interface ${nodeIf}.${vlanSvc}
  vlan-type dot1q ${vlanSvc}
  mtu 9500
- description :${cid}:${rt}
+ description :${cid}:INEXT/${rt}
  ip binding vpn-instance ${vlanSvc}
  ip address ${nodeL3Ip} ${wanMask}
  statistic enable
@@ -502,7 +510,7 @@ bgp 65423
   import-route direct
   nexthop recursive-lookup non-critical-event delay 0
   peer ${l3PeerIp} as-number 65001
-  peer ${l3PeerIp} description :${cid}:${rt}
+  peer ${l3PeerIp} description :${cid}:INEXT/${rt}
   peer ${l3PeerIp} ebgp-max-hop 5
   peer ${l3PeerIp} connect-interface ${nodeIf}.${vlanSvc}
   peer ${l3PeerIp} bfd enable
@@ -511,13 +519,12 @@ bgp 65423
   peer ${l3PeerIp} route-limit 10 80 alert-only
   peer ${l3PeerIp} advertise-community
 #`;
-      }
+  }
 
-      function jtExtraBlock(nodeName, nodeIf) {
-        // เพิ่มเฉพาะ node ที่ขึ้นต้นด้วย JT
-        if (!/^JT/i.test(nodeName || "")) return "";
-        // ใช้ port ตาม iface ที่กรอกมา (เปลี่ยนตามค่า)
-        return `
+  function jtExtraBlock(nodeName, nodeIf) {
+    if (!/^JT/i.test(nodeName || "")) return "";
+    if (!vlanSvc || !nodeIf) return "";
+    return `
 vlan ${vlanSvc}
 name "${cid}:${rt}"
 
@@ -531,70 +538,63 @@ interface ${nodeIf}
  undo port trunk allow-pass vlan 1
  port trunk allow-pass vlan ${formData.MGMT_VLAN} ${vlanSvc}
 `;
-      }
+  }
 
-      const descBase = `:${cid}:${rt}`;
+  function mgmtBlock(nodeIf, nodeNodeIp, nodeMask, nodeRtIp, nqaId) {
+    // ถ้าไม่ได้กรอก WAN MGMT ก็ไม่พิมพ์ mgmt ส่วนนี้ แต่ยังพิมพ์ L3 ได้
+    if (!nodeIf || !nodeNodeIp || !nodeMask || !nodeRtIp) return "";
+    if (!loop) return ""; // route-static ไป loopback ต้องมี loopback
 
-      let out = `===== PRECONFIG NODE =====`;
-
-      // MAIN
-      if (mNodeName && mIface && mNodeIp && mRtIp) {
-        out += `
-NODE ${mNodeName}
+    return `
 #
-interface ${mIface}.${formData.MGMT_VLAN}
+interface ${nodeIf}.${formData.MGMT_VLAN}
  vlan-type dot1q ${formData.MGMT_VLAN}
  description ${descBase}
  ip binding vpn-instance __dcn_vpn__
- ip address ${mNodeIp} ${mMask}
+ ip address ${nodeNodeIp} ${nodeMask}
  statistic enable
 #
-nqa test-instance ${cid} 1
+nqa test-instance ${cid} ${nqaId}
  test-type icmp
- destination-address ipv4 ${mRtIp}
- source-address ipv4 ${mNodeIp}
+ destination-address ipv4 ${nodeRtIp}
+ source-address ipv4 ${nodeNodeIp}
  vpn-instance __dcn_vpn__
  frequency 30
  start now
 #
-ip route-static vpn-instance __dcn_vpn__ ${loop} 32 ${mRtIp} track nqa ${cid} 1
+ip route-static vpn-instance __dcn_vpn__ ${loop} 32 ${nodeRtIp} track nqa ${cid} ${nqaId}
+#`;
+  }
+
+  let out = `===== PRECONFIG NODE =====`;
+
+  // MAIN: แสดง mgmt ถ้ามี / และแสดง L3VPN ถ้ามีแม้ mgmt ไม่มี
+  if (mNodeName && mIface) {
+    out += `
+NODE ${mNodeName}
+${mgmtBlock(mIface, mNodeIp, mMask, mRtIp, 1)}
 ${l3Block(mIface, l3MainIp)}
 ${jtExtraBlock(mNodeName, mIface)}
 `.trimEnd();
-      }
+  }
 
-      // PROTECTION
-      if (hasProtect && pNodeName && pIface && pNodeIp && pRtIp) {
-        out += `
+  // PROTECT
+  if (hasProtect && pNodeName && pIface) {
+    out += `
 
 NODE ${pNodeName}
-#
-interface ${pIface}.${formData.MGMT_VLAN}
- vlan-type dot1q ${formData.MGMT_VLAN}
- description ${descBase}
- ip binding vpn-instance __dcn_vpn__
- ip address ${pNodeIp} ${pMask}
- statistic enable
-#
-nqa test-instance ${cid} 2
- test-type icmp
- destination-address ipv4 ${pRtIp}
- source-address ipv4 ${pNodeIp}
- vpn-instance __dcn_vpn__
- frequency 30
- start now
-#
-ip route-static vpn-instance __dcn_vpn__ ${loop} 32 ${pRtIp} track nqa ${cid} 2
+${mgmtBlock(pIface, pNodeIp, pMask, pRtIp, 2)}
 ${l3Block(pIface, l3ProtIp)}
 ${jtExtraBlock(pNodeName, pIface)}
 `.trimEnd();
-      }
+  }
 
-      out += `
+  out += `
 
 ===== END PRECONFIG NODE =====`;
-      return out;
-    }
+  return out;
+}
+
 
     const preconfigNodeText = buildPreconfigNodeSection();
 
