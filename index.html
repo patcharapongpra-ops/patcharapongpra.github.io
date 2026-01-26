@@ -931,6 +931,7 @@ y
     // ใช้ WAN/LAN แบบมี "/" ใน prefix-list ตาม requirement
     const wanPrefix = (formData.WAN_IP_Network || "").trim();
     const lanPrefix = (formData.LAN_IP_Network || "").trim();
+        const proxyHost = (formData.PROXY || "").trim();
 
     return `
 service timestamps debug datetime msec localtime
