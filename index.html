@@ -307,29 +307,52 @@
       let gwIp = o.join(".");
       return cidr ? `${gwIp} ${cidr}` : gwIp;
     }
+
     // ตัด prefix + ลบ # สำหรับชื่อ node
     function normalizeNodeName(raw) {
-  if (!raw) return "";
-  let name = raw.trim();
+      if (!raw) return "";
+      let name = raw.trim();
 
-  const patterns = [
-    /^CX600_/i,
-    /^JT-SW2-CX_/i,
-    /^JT-SW1-CX_/i,
-    /^JT-M4-/i,
-    /^ATN950B_/i,
-    /^ATN910C_/i
-  ];
+      const patterns = [
+        /^CX600_/i,
+        /^JT-SW2-CX_/i,
+        /^JT-SW1-CX_/i,
+        /^JT-M4-/i,
+        /^ATN950B_/i,
+        /^ATN910C_/i
+      ];
 
-  patterns.forEach(re => {
-    name = name.replace(re, "");
-  });
+      patterns.forEach(re => {
+        name = name.replace(re, "");
+      });
 
-  // ลบ # ทุกตัว เช่น TSM#2 -> TSM2
-  return name.replace(/#/g, "");
-}
+      // ลบ # ทุกตัว เช่น TSM#2 -> TSM2
+      return name.replace(/#/g, "");
+    }
+
     function parseNode(raw){ if(!raw) return {node:"",iface:""}; let p=raw.trim().split(/\s+/); return {node:p[0]||"",iface:p[1]||""}; }
     function buildDescriptionFromParsed(p){ if(!p.node||!p.iface) return ""; return `[NODE]:TO:[${p.node}]<VIA>[JAS]:[${p.iface}]`; }
+
+    // เพิ่ม: แปลงชื่อ interface ฝั่ง Node (เช่น GE0/3/20 => GigabitEthernet0/3/20)
+    function toNodeIface(iface) {
+      if (!iface) return "";
+      let s = iface.trim();
+      s = s.replace(/^10GE/i, "10GigabitEthernet");
+      s = s.replace(/^GE/i, "GigabitEthernet");
+      return s;
+    }
+
+    // ===== CID rule (.124 / .123) =====
+    const cidTrim = (formData.Cxxx || "").trim();
+    const isP = /^P/i.test(cidTrim);
+    const mgmtDot1q = isP ? "123" : "124";
+    formData.MGMT_VLAN = mgmtDot1q;
+
+    // mask ตาม / ของ MGMT (node) ทั้งสองเส้น
+    const wan1Node = parseIpCidr(formData.WAN1_IP_NODE_raw);
+    const wan2Node = parseIpCidr(formData.WAN2_IP_NODE_raw);
+    formData.WAN1_NODE_MASK = cidrToMask(wan1Node.cidr);
+    formData.WAN2_NODE_MASK = cidrToMask(wan2Node.cidr);
 
     // ===== Pre-compute (Huawei style) =====
     formData.WAN1_IP_CustomerSUB1_cli = toCliMask(formData.WAN1_IP_CustomerSUB1);
@@ -342,69 +365,68 @@
     formData.WAN2_IP_Customer = stripSubnet(formData.WAN2_IP_CustomerSUB2);
     formData.LAN_IP_Gateway = getGateway(formData.LAN_IP_Network);
 
-   // WAN base + offset
-if (formData.WAN_IP_Network) {
-  let { ip: baseIp, cidr: wanCidr } = parseIpCidr(formData.WAN_IP_Network);
-  if (baseIp) {
-    const isSwitch = (deviceType === "huawei-switch");
-    // Router: +3, Switch: +6
-    formData.Wan_IP_Customer_RT  = addToIp(baseIp, isSwitch ? 6 : 3);
-    formData.WAN_IP_MAIN         = addToIp(baseIp, 1);
-    formData.WAN_IP_PROTECTION   = addToIp(baseIp, 2);
+    // WAN base + offset
+    if (formData.WAN_IP_Network) {
+      let { ip: baseIp, cidr: wanCidr } = parseIpCidr(formData.WAN_IP_Network);
+      if (baseIp) {
+        const isSwitch = (deviceType === "huawei-switch");
+        // Router: +3, Switch: +6
+        formData.Wan_IP_Customer_RT  = addToIp(baseIp, isSwitch ? 6 : 3);
+        formData.WAN_IP_MAIN         = addToIp(baseIp, 1);
+        formData.WAN_IP_PROTECTION   = addToIp(baseIp, 2);
 
-    // สร้าง mask จาก CIDR
-    const wanMask = cidrToMask(wanCidr);
-    formData.WAN_IP_Network_mask = wanMask ? `${baseIp} ${wanMask}` : "";
+        // สร้าง mask จาก CIDR
+        const wanMask = cidrToMask(wanCidr);
+        formData.WAN_IP_Network_mask = wanMask ? `${baseIp} ${wanMask}` : "";
 
-    // สำหรับ Switch (ใช้ใน interface Vlanif${formData.VLAN})
-    formData.WAN_IP_Mask = wanMask || "";
-    formData.Wan_IP_Customer_RT_withMask =
-      (formData.Wan_IP_Customer_RT && wanMask)
-        ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
-        : formData.Wan_IP_Customer_RT;
+        // สำหรับ Switch (ใช้ใน interface Vlanif${formData.VLAN})
+        formData.WAN_IP_Mask = wanMask || "";
+        formData.Wan_IP_Customer_RT_withMask =
+          (formData.Wan_IP_Customer_RT && wanMask)
+            ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
+            : formData.Wan_IP_Customer_RT;
 
-    // สำหรับ Cisco (คงรูปแบบเดิม)
-    formData.Wan_IP_Customer_RT_mask =
-      (formData.Wan_IP_Customer_RT && wanMask)
-        ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
-        : "";
-  } else {
-    formData.Wan_IP_Customer_RT = "";
-    formData.Wan_IP_Customer_RT_mask = "";
-    formData.WAN_IP_MAIN = "";
-    formData.WAN_IP_PROTECTION = "";
-    formData.WAN_IP_Network_mask = "";
-    formData.WAN_IP_Mask = "";
-    formData.Wan_IP_Customer_RT_withMask = "";
-  }
-} else {
-  formData.Wan_IP_Customer_RT = "";
-  formData.Wan_IP_Customer_RT_mask = "";
-  formData.WAN_IP_MAIN = "";
-  formData.WAN_IP_PROTECTION = "";
-  formData.WAN_IP_Network_mask = "";
-  formData.WAN_IP_Mask = "";
-  formData.Wan_IP_Customer_RT_withMask = "";
-}
+        // สำหรับ Cisco (คงรูปแบบเดิม)
+        formData.Wan_IP_Customer_RT_mask =
+          (formData.Wan_IP_Customer_RT && wanMask)
+            ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
+            : "";
+      } else {
+        formData.Wan_IP_Customer_RT = "";
+        formData.Wan_IP_Customer_RT_mask = "";
+        formData.WAN_IP_MAIN = "";
+        formData.WAN_IP_PROTECTION = "";
+        formData.WAN_IP_Network_mask = "";
+        formData.WAN_IP_Mask = "";
+        formData.Wan_IP_Customer_RT_withMask = "";
+      }
+    } else {
+      formData.Wan_IP_Customer_RT = "";
+      formData.Wan_IP_Customer_RT_mask = "";
+      formData.WAN_IP_MAIN = "";
+      formData.WAN_IP_PROTECTION = "";
+      formData.WAN_IP_Network_mask = "";
+      formData.WAN_IP_Mask = "";
+      formData.Wan_IP_Customer_RT_withMask = "";
+    }
 
-// Cisco: LAN network + mask
-if (formData.LAN_IP_Network) {
-  let { ip: lanBase, cidr: lanCidr } = parseIpCidr(formData.LAN_IP_Network);
-  const lanMask = cidrToMask(lanCidr);
-  formData.LAN_IP_Network_mask = (lanBase && lanMask) ? `${lanBase} ${lanMask}` : "";
-} else {
-  formData.LAN_IP_Network_mask = "";
-}
+    // Cisco: LAN network + mask
+    if (formData.LAN_IP_Network) {
+      let { ip: lanBase, cidr: lanCidr } = parseIpCidr(formData.LAN_IP_Network);
+      const lanMask = cidrToMask(lanCidr);
+      formData.LAN_IP_Network_mask = (lanBase && lanMask) ? `${lanBase} ${lanMask}` : "";
+    } else {
+      formData.LAN_IP_Network_mask = "";
+    }
 
-// Cisco: LAN gateway ip + mask
-if (formData.LAN_IP_Gateway) {
-  let { ip: lanGwIp, cidr: lanGwCidr } = parseIpCidr(formData.LAN_IP_Gateway);
-  const lanGwMask = cidrToMask(lanGwCidr);
-  formData.LAN_IP_Gateway_mask = (lanGwIp && lanGwMask) ? `${lanGwIp} ${lanGwMask}` : "";
-} else {
-  formData.LAN_IP_Gateway_mask = "";
-}
-
+    // Cisco: LAN gateway ip + mask
+    if (formData.LAN_IP_Gateway) {
+      let { ip: lanGwIp, cidr: lanGwCidr } = parseIpCidr(formData.LAN_IP_Gateway);
+      const lanGwMask = cidrToMask(lanGwCidr);
+      formData.LAN_IP_Gateway_mask = (lanGwIp && lanGwMask) ? `${lanGwIp} ${lanGwMask}` : "";
+    } else {
+      formData.LAN_IP_Gateway_mask = "";
+    }
 
     // Nodes & descriptions
     const mainParsed = parseNode(formData.Name_main_raw);
@@ -420,6 +442,163 @@ if (formData.LAN_IP_Gateway) {
     formData.DES1_built = buildDescriptionFromParsed(mainParsed);
     formData.DES2_built = hasProtect ? buildDescriptionFromParsed(protParsed) : "";
 
+    // ===== Preconfig Node (เพิ่มเข้า output ทุก device, โดยไม่ทำให้ output เดิมหาย) =====
+    function buildPreconfigNodeSection() {
+      const cid = (formData.Cxxx || "").trim();
+      const rt  = (formData.RT_Name || "").trim();
+      const vlanSvc = (formData.VLAN || "").trim();
+      const loop = (formData.LOOPBACK || "").trim();
+      const isPcid = /^P/i.test(cid);
+
+      const mNode = parseNode(formData.Name_main_raw);
+      const pNode = parseNode(formData.Name_Protection_raw);
+
+      const mNodeName = (mNode.node || "").trim();
+      const pNodeName = (pNode.node || "").trim();
+      const mIface = toNodeIface(mNode.iface || "");
+      const pIface = toNodeIface(pNode.iface || "");
+
+      const mNodeIp = stripSubnet(formData.WAN1_IP_NODE_raw);
+      const mRtIp   = stripSubnet(formData.WAN1_IP_CustomerSUB1);
+      const pNodeIp = stripSubnet(formData.WAN2_IP_NODE_raw);
+      const pRtIp   = stripSubnet(formData.WAN2_IP_CustomerSUB2);
+
+      const mMask = formData.WAN1_NODE_MASK || "";
+      const pMask = formData.WAN2_NODE_MASK || "";
+
+      // L3VPN only for CID starts with C (ตามที่คุณสั่ง: ถ้า P ให้ลบทิ้งทั้งก้อน)
+      const includeL3vpn = !isPcid;
+
+      // สำหรับ L3VPN: node ip = base+1/base+2, peer = customer rt ip (formData.Wan_IP_Customer_RT)
+      const wanNet = parseIpCidr(formData.WAN_IP_Network);
+      const wanMask = cidrToMask(wanNet.cidr);
+      const l3MainIp = formData.WAN_IP_MAIN || "";
+      const l3ProtIp = formData.WAN_IP_PROTECTION || "";
+      const l3PeerIp = formData.Wan_IP_Customer_RT || "";
+
+      function l3Block(nodeIf, nodeL3Ip) {
+        if (!includeL3vpn) return "";
+
+        return `
+#
+ip vpn-instance ${vlanSvc}
+ description :${cid}:${rt}
+ ipv4-family
+  route-distinguisher 65423:${vlanSvc}
+  apply-label per-route
+  vpn-target 65423:65423 export-extcommunity
+  vpn-target 65423:65423 import-extcommunity
+#
+interface ${nodeIf}.${vlanSvc}
+ vlan-type dot1q ${vlanSvc}
+ mtu 9500
+ description :${cid}:${rt}
+ ip binding vpn-instance ${vlanSvc}
+ ip address ${nodeL3Ip} ${wanMask}
+ statistic enable
+#
+bgp 65423
+ ipv4-family vpn-instance ${vlanSvc}
+  import-route direct
+  nexthop recursive-lookup non-critical-event delay 0
+  peer ${l3PeerIp} as-number 65001
+  peer ${l3PeerIp} description :${cid}:${rt}
+  peer ${l3PeerIp} ebgp-max-hop 5
+  peer ${l3PeerIp} connect-interface ${nodeIf}.${vlanSvc}
+  peer ${l3PeerIp} bfd enable
+  peer ${l3PeerIp} route-policy rp_customer_l3vpn_in import
+  peer ${l3PeerIp} route-policy rp_customer_l3vpn_out export
+  peer ${l3PeerIp} route-limit 10 80 alert-only
+  peer ${l3PeerIp} advertise-community
+#`;
+      }
+
+      function jtExtraBlock(nodeName, nodeIf) {
+        // เพิ่มเฉพาะ node ที่ขึ้นต้นด้วย JT
+        if (!/^JT/i.test(nodeName || "")) return "";
+        // ใช้ port ตาม iface ที่กรอกมา (เปลี่ยนตามค่า)
+        return `
+vlan ${vlanSvc}
+name "${cid}:${rt}"
+
+interface Eth-Trunk10
+port trunk allow-pass vlan ${vlanSvc}
+
+interface ${nodeIf}
+ undo negotiation auto
+ description :${cid}:${rt}
+ port link-type trunk
+ undo port trunk allow-pass vlan 1
+ port trunk allow-pass vlan ${formData.MGMT_VLAN} ${vlanSvc}
+`;
+      }
+
+      const descBase = `:${cid}:${rt}`;
+
+      let out = `===== PRECONFIG NODE =====`;
+
+      // MAIN
+      if (mNodeName && mIface && mNodeIp && mRtIp) {
+        out += `
+NODE ${mNodeName}
+#
+interface ${mIface}.${formData.MGMT_VLAN}
+ vlan-type dot1q ${formData.MGMT_VLAN}
+ description ${descBase}
+ ip binding vpn-instance __dcn_vpn__
+ ip address ${mNodeIp} ${mMask}
+ statistic enable
+#
+nqa test-instance ${cid} 1
+ test-type icmp
+ destination-address ipv4 ${mRtIp}
+ source-address ipv4 ${mNodeIp}
+ vpn-instance __dcn_vpn__
+ frequency 30
+ start now
+#
+ip route-static vpn-instance __dcn_vpn__ ${loop} 32 ${mRtIp} track nqa ${cid} 1
+${l3Block(mIface, l3MainIp)}
+${jtExtraBlock(mNodeName, mIface)}
+`.trimEnd();
+      }
+
+      // PROTECTION
+      if (hasProtect && pNodeName && pIface && pNodeIp && pRtIp) {
+        out += `
+
+NODE ${pNodeName}
+#
+interface ${pIface}.${formData.MGMT_VLAN}
+ vlan-type dot1q ${formData.MGMT_VLAN}
+ description ${descBase}
+ ip binding vpn-instance __dcn_vpn__
+ ip address ${pNodeIp} ${pMask}
+ statistic enable
+#
+nqa test-instance ${cid} 2
+ test-type icmp
+ destination-address ipv4 ${pRtIp}
+ source-address ipv4 ${pNodeIp}
+ vpn-instance __dcn_vpn__
+ frequency 30
+ start now
+#
+ip route-static vpn-instance __dcn_vpn__ ${loop} 32 ${pRtIp} track nqa ${cid} 2
+${l3Block(pIface, l3ProtIp)}
+${jtExtraBlock(pNodeName, pIface)}
+`.trimEnd();
+      }
+
+      out += `
+
+===== END PRECONFIG NODE =====`;
+      return out;
+    }
+
+    const preconfigNodeText = buildPreconfigNodeSection();
+
+    // ===== Build original config (เดิมทุกบรรทัด) =====
     let textTemplate;
     if (deviceType === "huawei-switch") {
       textTemplate = buildSwitchConfig(formData, hasProtect);
@@ -429,7 +608,10 @@ if (formData.LAN_IP_Gateway) {
       textTemplate = buildHuaweiRouterConfig(formData, hasProtect);
     }
 
-    document.getElementById("output").textContent = textTemplate.trim();
+    // รวม Preconfig + Output เดิม (ไม่ตัดทิ้งแม้แต่บรรทัดเดียว)
+    const finalOutput = `${preconfigNodeText}\n\n${textTemplate}`.trim();
+
+    document.getElementById("output").textContent = finalOutput;
     document.getElementById("outputStatus").textContent = "สร้าง Config แล้ว";
   }
 
@@ -931,7 +1113,7 @@ y
     // ใช้ WAN/LAN แบบมี "/" ใน prefix-list ตาม requirement
     const wanPrefix = (formData.WAN_IP_Network || "").trim();
     const lanPrefix = (formData.LAN_IP_Network || "").trim();
-        const proxyHost = (formData.PROXY || "").trim();
+    const proxyHost = (formData.PROXY || "").trim();
 
     return `
 service timestamps debug datetime msec localtime
