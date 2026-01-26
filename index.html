@@ -552,12 +552,12 @@ aaa
  local-user nocjastel password irreversible-cipher Ov80ylgm]#
  local-user nocjastel privilege level 3
 y
- local-user nocjastel service-type telnet ssh stelnet
+ local-user nocjastel service-type telnet ssh
 y
  local-user jastel password irreversible-cipher Jastel@min1234#
  local-user jastel privilege level 3
 y
- local-user jastel service-type telnet ssh stelnet
+ local-user jastel service-type telnet ssh
 y
 q
 
@@ -750,7 +750,7 @@ y
 telnet server enable
 telnet server-source all-interface
 y
-telnet server acl 2000
+
 stelnet server enable
 
 lldp enable
@@ -767,6 +767,8 @@ acl name Monitor-Telnet 2000
  rule 6 permit source 58.82.174.0 0.0.0.255
  rule 1000 deny 
 qu
+
+telnet server acl 2000
 
 interface Loopback 1
  ip address ${formData.LOOPBACK} 32
@@ -866,7 +868,6 @@ snmp-agent community read +jastel+ mib-view iso-view acl 2000
 snmp-agent sys-info version v2c
 
 snmp-agent sys-info version v3 disable 
-y
 
 snmp-agent sys-info contact "${formData.Customerfullname}"                                     
 snmp-agent target-host trap address udp-domain 169.254.254.40 params securityname cipher +jastel+ v2c private-netmanager
@@ -1049,7 +1050,7 @@ access-list 30 permit 58.82.174.240 0.0.0.15
 snmp-server community +jastel+ RO 30
 snmp-server trap-source gigabitEthernet 0/0/0
 snmp-server contact "${formData.Customerfullname}"                              						
-snmp-server host 58.82.174.4 version 2c +jastel+											
+snmp-server host ${proxyHost} version 2c +jastel+											
 snmp-server enable traps
 
 route-map rp_peer_node_main_in permit 10
