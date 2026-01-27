@@ -490,7 +490,7 @@
     return `
 #
 ip vpn-instance ${vlanSvc}
- description :${cid}:INEXT/${rt}
+ description :${cid}:${rt}
  ipv4-family
   route-distinguisher 65423:${vlanSvc}
   apply-label per-route
@@ -500,7 +500,7 @@ ip vpn-instance ${vlanSvc}
 interface ${nodeIf}.${vlanSvc}
  vlan-type dot1q ${vlanSvc}
  mtu 9500
- description :${cid}:INEXT/${rt}
+ description :${cid}:${rt}
  ip binding vpn-instance ${vlanSvc}
  ip address ${nodeL3Ip} ${wanMask}
  statistic enable
@@ -510,7 +510,7 @@ bgp 65423
   import-route direct
   nexthop recursive-lookup non-critical-event delay 0
   peer ${l3PeerIp} as-number 65001
-  peer ${l3PeerIp} description :${cid}:INEXT/${rt}
+  peer ${l3PeerIp} description :${cid}:${rt}
   peer ${l3PeerIp} ebgp-max-hop 5
   peer ${l3PeerIp} connect-interface ${nodeIf}.${vlanSvc}
   peer ${l3PeerIp} bfd enable
