@@ -508,7 +508,6 @@ interface ${nodeIf}.${vlanSvc}
 bgp 65423
  ipv4-family vpn-instance ${vlanSvc}
   import-route direct
-  nexthop recursive-lookup non-critical-event delay 0
   peer ${l3PeerIp} as-number 65001
   peer ${l3PeerIp} description :${cid}:${rt}
   peer ${l3PeerIp} ebgp-max-hop 5
@@ -684,6 +683,10 @@ q
 telnet server acl 2000
 
 ssh server acl 2000
+
+snmp-agent acl 2000
+
+ftp server acl 2000
 
 traffic classifier GRAPH-DOMESTIC type or
  if-match dscp default 
