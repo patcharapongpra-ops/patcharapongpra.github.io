@@ -3,74 +3,332 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Provi Portal</title>
+  <title>Provisioning Portal</title>
   <style>
-    :root{--bg:#0b0f14;--card:#121a24;--line:#223043;--text:#e7f0fb;--muted:#8aa0b8;}
+    :root{
+      --bg:#0b0f14;
+      --panel:#101826;
+      --panel2:#0f1722;
+      --line:#243449;
+      --text:#eaf2ff;
+      --muted:#8fa4be;
+      --accent:#ff7a18;   /* ORANGE */
+      --accent2:#ff9a3c;
+      --ok:#37d67a;
+      --warn:#ffd089;
+    }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#0b0f14,#070a0d);color:var(--text);}
-    .wrap{max-width:980px;margin:0 auto;padding:18px;}
-    .card{background:rgba(18,26,36,.92);border:1px solid var(--line);border-radius:16px;padding:16px;}
-    h1{margin:0;font-size:18px;}
-    .muted{color:var(--muted);font-size:12px;margin-top:6px;}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: radial-gradient(1200px 600px at 10% 0%, rgba(255,122,24,.16), transparent 55%),
+                  radial-gradient(900px 500px at 90% 20%, rgba(255,154,60,.10), transparent 55%),
+                  linear-gradient(180deg, #0b0f14, #070a0d);
+      color:var(--text);
+      min-height:100vh;
+    }
+
+    /* Topbar */
+    .topbar{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px);
+      background: rgba(11,15,20,.65);
+      border-bottom:1px solid rgba(36,52,73,.65);
+    }
+    .topbar-inner{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; gap:12px;
+      padding:12px 16px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:900; letter-spacing:.2px;
+    }
+    .logo{
+      width:34px; height:34px; border-radius:12px;
+      background: linear-gradient(180deg, var(--accent), #d85f0f);
+      box-shadow: 0 10px 30px rgba(255,122,24,.18);
+      display:grid; place-items:center;
+      font-weight:1000;
+    }
+    .brand small{display:block; font-weight:700; color:var(--muted); margin-top:2px; letter-spacing:0}
     .spacer{flex:1}
-    .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:800;}
-    .btn.primary{background:linear-gradient(180deg,#1d3b63,#162a44);border-color:#2f5f9a}
-    .btn.danger{background:linear-gradient(180deg,#5a1d1d,#3b1414);border-color:#8a2f2f}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
-    a.link{color:#cfe3ff;text-decoration:none;border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:inline-block}
-    input,select{background:#0e1520;border:1px solid var(--line);color:var(--text);padding:10px 10px;border-radius:12px;outline:none;min-width:180px}
-    pre{white-space:pre-wrap;word-break:break-word;background:#0e1520;border:1px solid var(--line);padding:10px;border-radius:12px;color:#cfe3ff;font-size:12px;margin-top:10px;}
-    .pill{font-size:12px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;color:var(--muted)}
+    .userbox{
+      display:flex; align-items:center; gap:10px;
+      color:var(--muted); font-size:13px;
+    }
+    .pill{
+      border:1px solid rgba(36,52,73,.9);
+      background: rgba(16,24,38,.75);
+      padding:6px 10px;
+      border-radius:999px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .btn{
+      border:1px solid rgba(36,52,73,.9);
+      background: rgba(16,24,38,.75);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(255,122,24,.95), rgba(216,95,15,.95));
+      border-color: rgba(255,122,24,.55);
+      color:#1a0d05;
+    }
+    .btn.ghost{
+      background: rgba(16,24,38,.35);
+    }
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+
+    /* Layout */
+    .container{max-width:1200px; margin:0 auto; padding:16px;}
+    .layout{
+      display:grid;
+      grid-template-columns: 260px 1fr;
+      gap:14px;
+      align-items:start;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      border:1px solid rgba(36,52,73,.75);
+      background: rgba(16,24,38,.65);
+      border-radius:18px;
+      padding:14px;
+      position:sticky; top:76px;
+    }
+    .nav-title{
+      font-size:12px; color:var(--muted);
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      margin:2px 0 10px;
+    }
+    .nav{
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .nav a{
+      text-decoration:none;
+      color:var(--text);
+      border:1px solid rgba(36,52,73,.75);
+      background: rgba(15,23,34,.6);
+      padding:10px 12px;
+      border-radius:14px;
+      display:flex; align-items:center; justify-content:space-between;
+      transition: transform .05s ease, border-color .2s ease;
+    }
+    .nav a:hover{border-color: rgba(255,122,24,.55); transform: translateY(-1px);}
+    .nav a .tag{
+      font-size:11px; color:var(--muted);
+      border:1px solid rgba(36,52,73,.75);
+      padding:2px 8px; border-radius:999px;
+      background: rgba(16,24,38,.55);
+    }
+
+    /* Main */
+    .main{
+      border:1px solid rgba(36,52,73,.75);
+      background: rgba(16,24,38,.55);
+      border-radius:18px;
+      padding:18px;
+      min-height:520px;
+    }
+    .hero{
+      border:1px solid rgba(255,122,24,.25);
+      background: radial-gradient(800px 260px at 20% 0%, rgba(255,122,24,.14), transparent 55%),
+                  rgba(15,23,34,.55);
+      border-radius:18px;
+      padding:16px;
+    }
+    .hero h2{margin:0; font-size:18px;}
+    .hero p{margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.5}
+    .grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+    .card{
+      border:1px solid rgba(36,52,73,.75);
+      background: rgba(15,23,34,.55);
+      border-radius:16px;
+      padding:14px;
+    }
+    .card h3{margin:0; font-size:14px;}
+    .card p{margin:6px 0 0; font-size:12px; color:var(--muted); line-height:1.5}
+    .statusline{margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .status{font-size:12px; color:var(--muted)}
     .hidden{display:none !important;}
+
+    /* Login Overlay */
+    .overlay{
+      position:fixed; inset:0;
+      display:grid; place-items:center;
+      padding:16px;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+      z-index:50;
+    }
+    .login{
+      width:min(520px, 100%);
+      border:1px solid rgba(36,52,73,.85);
+      background: rgba(16,24,38,.92);
+      border-radius:18px;
+      padding:18px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.45);
+    }
+    .login h2{margin:0; font-size:18px;}
+    .login .sub{margin-top:6px; font-size:13px; color:var(--muted); line-height:1.5}
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center}
+    select,input{
+      background: rgba(14,21,32,.95);
+      border:1px solid rgba(36,52,73,.9);
+      color:var(--text);
+      padding:10px 10px;
+      border-radius:12px;
+      outline:none;
+      min-width:200px;
+    }
+    input::placeholder{color:#6f859d}
+    pre{
+      margin-top:10px;
+      white-space:pre-wrap;word-break:break-word;
+      background: rgba(14,21,32,.95);
+      border:1px solid rgba(36,52,73,.9);
+      padding:10px;border-radius:12px;
+      color:#cfe3ff;font-size:12px;
+    }
+
+    @media (max-width: 980px){
+      .layout{grid-template-columns: 1fr;}
+      .sidebar{position:relative; top:auto;}
+      .grid{grid-template-columns: 1fr;}
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Provisioning Web Portal</h1>
-      <div class="muted">ต้อง Login ก่อน ถึงจะเห็นเมนูเข้า Checklist/Config</div>
 
-      <!-- LOGIN PANEL (always visible) -->
-      <div class="row" style="margin-top:14px;">
-        <select id="userPick" title="เลือกผู้ใช้">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo">P</div>
+        <div>
+          Provisioning Portal
+          <small>Daily work tracking • Sync to Drive</small>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="userbox">
+        <span class="pill" id="dirtyPill">dirty: no</span>
+        <span class="pill" id="who">Not logged in</span>
+        <button class="btn ghost hidden" id="btnLogout">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="layout">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="nav-title">Navigation</div>
+        <nav class="nav" id="nav">
+          <a href="provi-daily-checklist.html">
+            <span>Provi Daily Checklist</span>
+            <span class="tag">Work</span>
+          </a>
+          <a href="temp_configuration.html">
+            <span>Temp Configuration</span>
+            <span class="tag">Tools</span>
+          </a>
+          <a href="#" id="openDrive">
+            <span>Open Drive Folder</span>
+            <span class="tag">Files</span>
+          </a>
+        </nav>
+
+        <div class="nav-title" style="margin-top:14px;">Quick actions</div>
+        <div class="nav">
+          <a href="#" id="syncNow">
+            <span>Sync now</span>
+            <span class="tag">Drive</span>
+          </a>
+          <a href="#" id="forceSync">
+            <span>Force sync</span>
+            <span class="tag">Drive</span>
+          </a>
+          <a href="#" id="markDirty">
+            <span>Mark dirty</span>
+            <span class="tag">Test</span>
+          </a>
+        </div>
+
+        <div class="statusline">
+          <span class="status" id="status">Ready</span>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <main class="main">
+        <div class="hero">
+          <h2>Announcement / Dashboard</h2>
+          <p>
+            พื้นที่ตรงกลางไว้ประกาศงาน / แจ้งเตือน / หรือสรุปสถานะภาพรวมในอนาคต
+            (ตอนนี้ยังเป็นหน้าเริ่มต้น)
+          </p>
+          <div class="statusline">
+            <span class="pill" id="userHint">Login เพื่อเริ่มใช้งาน</span>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Today focus</h3>
+            <p>รายการวงจรที่ต้องทำวันนี้ / ค้าง / ใกล้วันติดตั้ง (ไว้ใส่ในเฟสถัดไป)</p>
+          </div>
+          <div class="card">
+            <h3>Sync policy</h3>
+            <p>Auto-sync ทุก 60 นาที เฉพาะเมื่อมีการเปลี่ยนแปลง (dirty)</p>
+          </div>
+          <div class="card">
+            <h3>Notes</h3>
+            <p>บันทึกแนวทาง/ประกาศของทีม Provisioning (พี่ค่อยแก้ข้อความได้)</p>
+          </div>
+        </div>
+
+        <pre id="out" class="hidden">-</pre>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- LOGIN OVERLAY -->
+  <div class="overlay" id="overlay">
+    <div class="login">
+      <h2>Login</h2>
+      <div class="sub">เลือกผู้ใช้และใส่รหัสผ่าน เพื่อเข้าใช้งาน Provisioning Portal</div>
+
+      <div class="row">
+        <select id="userPick">
           <option value="">เลือกผู้ใช้…</option>
           <option value="Patcharapong">Patcharapong</option>
           <option value="Nawaphon">Nawaphon</option>
         </select>
-        <input id="pass" placeholder="password" type="password" />
-        <button class="btn primary" id="btnLogin">Login</button>
-        <button class="btn" id="btnLogout">Logout</button>
-        <div class="spacer"></div>
-        <div class="muted" id="who">Not logged in</div>
+        <input id="pass" type="password" placeholder="Password" />
+        <button class="btn primary" id="btnLogin">Sign in</button>
       </div>
 
-      <!-- PORTAL MENU (hidden until login) -->
-      <div id="portal" class="hidden">
-        <div class="row">
-          <a class="link" href="provi-daily-checklist.html">Provi Daily Checklist</a>
-          <a class="link" href="temp_configuration.html">Temp Configuration</a>
-          <a class="link" id="openDrive" href="#">Open Drive folder</a>
-          <div class="spacer"></div>
-          <span class="pill" id="dirtyPill">dirty: no</span>
-        </div>
-
-        <div class="row">
-          <button class="btn primary" id="btnSync">Sync now</button>
-          <button class="btn" id="btnMarkDirty">Mark dirty</button>
-          <button class="btn danger" id="btnForceSync">Force sync</button>
-          <div class="spacer"></div>
-          <div class="muted" id="status">Ready</div>
-        </div>
-
-        <div class="muted" style="margin-top:12px;">ดีบัก</div>
-        <pre id="out">-</pre>
+      <div class="sub" style="margin-top:10px;">
+        * หลัง Login แล้ว กล่องนี้จะหายไป เหลือปุ่ม Logout มุมขวาบน
       </div>
 
-      <!-- small hint for not logged in -->
-      <div id="hint" class="muted" style="margin-top:12px;">
-        * ถ้ายังไม่ Login จะยังไม่โชว์เมนู
-      </div>
+      <pre id="loginDebug">-</pre>
     </div>
   </div>
 
@@ -87,7 +345,13 @@
 
     const $ = (id) => document.getElementById(id);
     const setStatus = (t) => $("status").textContent = t;
-    const log = (obj) => $("out").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
+    const log = (obj) => {
+      const txt = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
+      const out = $("out"); if(out) out.textContent = txt;
+    };
+    const logLogin = (obj) => {
+      $("loginDebug").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
+    };
 
     function ymNow(){ return new Date().toISOString().slice(0,7); }
 
@@ -96,7 +360,7 @@
       if(v) localStorage.setItem(DIRTY_KEY,"1");
       else localStorage.removeItem(DIRTY_KEY);
       $("dirtyPill").textContent = "dirty: " + (isDirty() ? "YES" : "no");
-      $("dirtyPill").style.color = isDirty() ? "#ffd089" : "var(--muted)";
+      $("dirtyPill").style.color = isDirty() ? "var(--warn)" : "var(--muted)";
     }
 
     function getSession(){
@@ -111,17 +375,22 @@
       const loggedIn = !!(s.user && s.pass);
 
       $("who").textContent = loggedIn ? `Logged in: ${s.user}` : "Not logged in";
-      $("portal").classList.toggle("hidden", !loggedIn);
-      $("hint").classList.toggle("hidden", loggedIn);
+      $("btnLogout").classList.toggle("hidden", !loggedIn);
+      $("overlay").classList.toggle("hidden", loggedIn);
 
-      if (loggedIn) setDirty(isDirty());
+      $("userHint").textContent = loggedIn ? `Welcome, ${s.user}` : "Login เพื่อเริ่มใช้งาน";
+      setDirty(isDirty());
+
+      // กันคนยังไม่ login กด nav (optional)
+      const nav = $("nav");
+      if (nav) nav.style.opacity = loggedIn ? "1" : ".55";
     }
 
     function buildPayload(){
       const s = getSession();
       const actor = s.user || "unknown";
 
-      // dummy payload (ต่อไปค่อยเปลี่ยนให้ดึง state จริง)
+      // dummy payload (เดี๋ยวเฟสถัดไปค่อยเปลี่ยนให้ดึง state จริงจาก checklist)
       const now = new Date();
       const dd = now.toISOString().slice(0,10);
       const tt = now.toTimeString().slice(0,5);
@@ -165,6 +434,13 @@
       window.open(`https://drive.google.com/drive/folders/${ROOT_DRIVE_FOLDER_ID}`, "_blank");
     }
 
+    function requireLoginOrWarn(){
+      const s = getSession();
+      if (s.user && s.pass) return true;
+      alert("กรุณา Login ก่อน");
+      return false;
+    }
+
     function startAutoSync(){
       setInterval(async () => {
         try{
@@ -172,39 +448,45 @@
           await sendToScript({ force:false });
         }catch(e){
           console.error(e);
-          if ($("status")) setStatus("⚠ Auto-sync failed: " + (e.message || e));
+          setStatus("⚠ Auto-sync failed: " + (e.message || e));
         }
       }, AUTO_SYNC_MINUTES * 60 * 1000);
     }
 
     function init(){
-      refreshUI();
-
-      $("btnLogin").onclick = () => {
-        const user = $("userPick").value;
-        const pass = $("pass").value;
-        if(!user || !pass){ alert("เลือก user และใส่รหัสก่อน"); return; }
-        setSession({ user, pass, ymLastSync: "" });
-        $("pass").value = "";
-        refreshUI();
-      };
-
+      // top right logout
       $("btnLogout").onclick = () => {
         clearSession();
         refreshUI();
+        setStatus("Logged out");
       };
 
-      $("openDrive").onclick = (e) => { e.preventDefault(); openDriveFolder(); };
+      // overlay login
+      $("btnLogin").onclick = () => {
+        const user = $("userPick").value;
+        const pass = $("pass").value;
+        if(!user || !pass){ logLogin("เลือก user + ใส่รหัสให้ครบ"); return; }
+        setSession({ user, pass, ymLastSync: "" });
+        $("pass").value = "";
+        logLogin({ ok:true, user });
+        refreshUI();
+      };
 
-      $("btnMarkDirty").onclick = () => { setDirty(true); setStatus("Marked dirty"); };
-      $("btnSync").onclick = async () => {
+      // nav actions
+      $("openDrive").onclick = (e) => { e.preventDefault(); if(requireLoginOrWarn()) openDriveFolder(); };
+      $("syncNow").onclick = async (e) => {
+        e.preventDefault();
+        if(!requireLoginOrWarn()) return;
         try { await sendToScript({ force:false }); }
-        catch(e){ setStatus("❌ Sync failed: " + (e.message||e)); log(String(e)); }
+        catch(err){ setStatus("❌ Sync failed: " + (err.message||err)); log(String(err)); }
       };
-      $("btnForceSync").onclick = async () => {
+      $("forceSync").onclick = async (e) => {
+        e.preventDefault();
+        if(!requireLoginOrWarn()) return;
         try { await sendToScript({ force:true }); }
-        catch(e){ setStatus("❌ Force sync failed: " + (e.message||e)); log(String(e)); }
+        catch(err){ setStatus("❌ Force sync failed: " + (err.message||err)); log(String(err)); }
       };
+      $("markDirty").onclick = (e) => { e.preventDefault(); if(requireLoginOrWarn()) { setDirty(true); setStatus("Marked dirty"); } };
 
       // ให้ checklist เรียกตอน save:
       window.ProviPortal = {
@@ -213,9 +495,10 @@
         getUser: () => (getSession().user || "")
       };
 
+      refreshUI();
       startAutoSync();
-      if ($("status")) setStatus("Ready");
-      if ($("out")) log("Ready. Login แล้วจะเห็นเมนู");
+      setStatus("Ready");
+      logLogin("Ready. Please login.");
     }
 
     init();
