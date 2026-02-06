@@ -50,39 +50,42 @@
   </div>
 
   <!-- MSAL -->
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.17.0/lib/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.17.0/lib/msal-browser.min.js"></script>
 
-  <script>
-    // ✅ ค่าจาก Entra App ของพี่
-    const tenantId = "17facf02-db6e-43c4-be96-fe5fca89079f";
-    const clientId = "f5b0755e-fd7a-499a-821d-7eb9f92703eb";
+<script>
+  const tenantId = "17facf02-db6e-43c4-be96-fe5fca89079f";
+  const clientId = "f5b0755e-fd7a-499a-821d-7eb9f92703eb";
 
-    const msalInstance = new msal.PublicClientApplication({
-      auth: {
-        clientId,
-        authority: `https://login.microsoftonline.com/${tenantId}`,
-        // สำคัญ: redirect ให้ตรงกับหน้านี้ (index.html)
-        redirectUri: window.location.origin + window.location.pathname,
-        navigateToLoginRequestUrl: false
-      },
-      cache: { cacheLocation: "localStorage" }
-    });
+  const msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId,
+      authority: `https://login.microsoftonline.com/${tenantId}`,
+      redirectUri: window.location.origin + window.location.pathname,
+      navigateToLoginRequestUrl: false
+    },
+    cache: { cacheLocation: "localStorage" }
+  });
 
-    const scopes = ["User.Read"]; // ขั้นแรกทดสอบแค่นี้ก่อน
+  const scopes = ["User.Read"];
 
-    const $ = (id) => document.getElementById(id);
-    const log = (obj) => $("out").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
+  const $ = (id) => document.getElementById(id);
+  const log = (obj) => $("out").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
 
-    async function getAccount() {
-      const accs = msalInstance.getAllAccounts();
-      return accs && accs.length ? accs[0] : null;
-    }
+  async function getAccount() {
+    const accs = msalInstance.getAllAccounts();
+    return accs && accs.length ? accs[0] : null;
+  }
 
-    async function refreshUI() {
-      const acc = await getAccount();
-      $("who").textContent = acc ? `Signed in: ${acc.username}` : "Not signed in";
-    }
+  async function refreshUI() {
+    const acc = await getAccount();
+    $("who").textContent = acc ? `Signed in: ${acc.username}` : "Not signed in";
+  }
 
+  async function main() {
+    // ✅ สำคัญมากใน MSAL v3
+    await msalInstance.initialize();
+
+    // bind buttons หลัง init
     $("btnLogin").addEventListener("click", async () => {
       try {
         const res = await msalInstance.loginPopup({ scopes });
@@ -95,11 +98,16 @@
     });
 
     $("btnLogout").addEventListener("click", async () => {
-      const acc = await getAccount();
-      if (!acc) return log("No account to logout");
-      await msalInstance.logoutPopup({ account: acc });
-      log("Signed out");
-      await refreshUI();
+      try {
+        const acc = await getAccount();
+        if (!acc) return log("No account to logout");
+        await msalInstance.logoutPopup({ account: acc });
+        log("Signed out");
+        await refreshUI();
+      } catch (e) {
+        console.error(e);
+        log(String(e));
+      }
     });
 
     $("btnToken").addEventListener("click", async () => {
@@ -117,7 +125,14 @@
     });
 
     // initial
-    refreshUI();
-  </script>
+    await refreshUI();
+    log("Ready. Click Sign in Microsoft.");
+  }
+
+  main().catch(err => {
+    console.error(err);
+    log("Init error: " + String(err));
+  });
+</script>
 </body>
 </html>
