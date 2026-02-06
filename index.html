@@ -16,11 +16,14 @@
     .spacer{flex:1}
     .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:800;}
     .btn.primary{background:linear-gradient(180deg,#1d3b63,#162a44);border-color:#2f5f9a}
+    .btn.danger{background:linear-gradient(180deg,#5a1d1d,#3b1414);border-color:#8a2f2f}
     .btn[disabled]{opacity:.5;cursor:not-allowed}
     a.link{color:#cfe3ff;text-decoration:none;border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:inline-block}
     a.link:hover{border-color:#2f425d}
-    code{background:#0e1520;border:1px solid var(--line);padding:2px 6px;border-radius:8px}
-    pre{white-space:pre-wrap;word-break:break-word;background:#0e1520;border:1px solid var(--line);padding:10px;border-radius:12px;color:#cfe3ff;font-size:12px;}
+    input{background:#0e1520;border:1px solid var(--line);color:var(--text);padding:10px 10px;border-radius:12px;outline:none;min-width:180px}
+    input::placeholder{color:#6f859d}
+    pre{white-space:pre-wrap;word-break:break-word;background:#0e1520;border:1px solid var(--line);padding:10px;border-radius:12px;color:#cfe3ff;font-size:12px;margin-top:10px;}
+    .pill{font-size:12px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;color:var(--muted)}
   </style>
 </head>
 <body>
@@ -28,111 +31,296 @@
     <div class="card">
       <h1>Provisioning Web Portal</h1>
       <div class="muted">
-        Login ด้วย Microsoft 365 แล้วค่อยไปทำหน้า checklist / config ต่อ
-      </div>
-
-      <div class="row">
-        <button class="btn primary" id="btnLogin">Sign in Microsoft</button>
-        <button class="btn" id="btnLogout">Sign out</button>
-        <button class="btn" id="btnToken">Test token</button>
-        <div class="spacer"></div>
-        <div class="muted" id="who">Not signed in</div>
+        ใช้ Google Drive (Apps Script) สำหรับ Sync รายเดือนของแต่ละคน — Auto-sync ทุก 60 นาที เฉพาะมีการเปลี่ยนแปลง
       </div>
 
       <div class="row">
         <a class="link" href="provi-daily-checklist.html">Provi Daily Checklist</a>
         <a class="link" href="temp_configuration.html">Temp Configuration</a>
+        <div class="spacer"></div>
+        <span class="pill" id="dirtyPill">dirty: no</span>
       </div>
 
-      <div class="muted" style="margin-top:12px;">สถานะ/ดีบัก</div>
+      <div class="row" style="margin-top:14px;">
+        <input id="u" placeholder="user (เช่น Admin)" />
+        <input id="p" placeholder="password" type="password" />
+        <button class="btn primary" id="btnSave">Save login</button>
+        <button class="btn" id="btnClear">Clear</button>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="btnSync">Sync now</button>
+        <button class="btn" id="btnMarkDirty">Mark dirty (test)</button>
+        <button class="btn danger" id="btnForceSync">Force sync (ignore dirty)</button>
+        <div class="spacer"></div>
+        <div class="muted" id="status">Ready</div>
+      </div>
+
+      <div class="muted" style="margin-top:12px;">ดีบัก</div>
       <pre id="out">-</pre>
     </div>
   </div>
 
-  <!-- MSAL -->
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.17.0/lib/msal-browser.min.js"></script>
+  <script>
+    /** =========================
+     * CONFIG
+     * ========================= **/
+    const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec";
+    const AUTO_SYNC_MINUTES = 60;
 
-<script>
-  const tenantId = "17facf02-db6e-43c4-be96-fe5fca89079f";
-  const clientId = "f5b0755e-fd7a-499a-821d-7eb9f92703eb";
+    // KEY สำหรับดึง state ของแอป checklist (พี่ค่อยแก้ให้ตรงของจริงทีหลัง)
+    // ตอนนี้ index จะส่ง "ตัวอย่างข้อมูล" ไปก่อน เพื่อทดสอบว่าไฟล์ถูกสร้างใน Drive ได้
+    const CHECKLIST_STATE_KEY = "provi_tracker_single_v2_clean";
 
-  const msalInstance = new msal.PublicClientApplication({
-    auth: {
-      clientId,
-      authority: `https://login.microsoftonline.com/${tenantId}`,
-      redirectUri: window.location.origin + window.location.pathname,
-      navigateToLoginRequestUrl: false
-    },
-    cache: { cacheLocation: "localStorage" }
-  });
+    const CRED_USER_KEY = "provi_user";
+    const CRED_PASS_KEY = "provi_pass";
+    const DIRTY_KEY = "provi_dirty";
 
-  const scopes = ["User.Read"];
+    /** =========================
+     * HELPERS
+     * ========================= **/
+    const $ = (id) => document.getElementById(id);
+    const log = (obj) => $("out").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
+    const setStatus = (t) => $("status").textContent = t;
 
-  const $ = (id) => document.getElementById(id);
-  const log = (obj) => $("out").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
+    function ymNow() {
+      return new Date().toISOString().slice(0, 7); // YYYY-MM
+    }
 
-  async function getAccount() {
-    const accs = msalInstance.getAllAccounts();
-    return accs && accs.length ? accs[0] : null;
-  }
+    function isDirty() { return localStorage.getItem(DIRTY_KEY) === "1"; }
+    function setDirty(v) {
+      if (v) localStorage.setItem(DIRTY_KEY, "1");
+      else localStorage.removeItem(DIRTY_KEY);
+      refreshDirtyPill();
+    }
+    function refreshDirtyPill() {
+      $("dirtyPill").textContent = "dirty: " + (isDirty() ? "YES" : "no");
+      $("dirtyPill").style.color = isDirty() ? "#ffd089" : "var(--muted)";
+      $("dirtyPill").style.borderColor = isDirty() ? "#6b4c20" : "var(--line)";
+    }
 
-  async function refreshUI() {
-    const acc = await getAccount();
-    $("who").textContent = acc ? `Signed in: ${acc.username}` : "Not signed in";
-  }
+    function getCreds() {
+      const user = localStorage.getItem(CRED_USER_KEY) || "";
+      const pass = localStorage.getItem(CRED_PASS_KEY) || "";
+      return { user, pass };
+    }
 
-  async function main() {
-    // ✅ สำคัญมากใน MSAL v3
-    await msalInstance.initialize();
+    function setCreds(user, pass) {
+      localStorage.setItem(CRED_USER_KEY, user);
+      localStorage.setItem(CRED_PASS_KEY, pass);
+    }
 
-    // bind buttons หลัง init
-    $("btnLogin").addEventListener("click", async () => {
-      try {
-        const res = await msalInstance.loginPopup({ scopes });
-        log({ ok: true, login: res.account.username });
-        await refreshUI();
-      } catch (e) {
-        console.error(e);
-        log(String(e));
+    function clearCreds() {
+      localStorage.removeItem(CRED_USER_KEY);
+      localStorage.removeItem(CRED_PASS_KEY);
+    }
+
+    /**
+     * Build payload to Apps Script
+     * โหมดทดสอบ: ถ้าไม่เจอ state ของ checklist จะส่ง dummy data ไปก่อน
+     */
+    function buildDataPayload() {
+      const actor = localStorage.getItem(CRED_USER_KEY) || "unknown";
+
+      // พยายามดึง state จริง ถ้ามี
+      const raw = localStorage.getItem(CHECKLIST_STATE_KEY);
+      if (raw) {
+        try {
+          const state = JSON.parse(raw);
+
+          // แปลง circuits เป็น rows (CircuitSnapshot)
+          const circuits = [];
+          const steps = (state.steps || state.STEPS || []); // เผื่อของเดิม
+          const circuitsObj = state.circuits || {};
+          for (const cid in circuitsObj) {
+            const c = circuitsObj[cid];
+            const progressPercent = typeof c.progressPercent === "number"
+              ? c.progressPercent
+              : (c.doneSteps ? Math.round((c.doneSteps.length / 21) * 100) : "");
+
+            circuits.push([
+              c.name || "",
+              c.sof || "",
+              c.cid || cid,
+              c.type || "",
+              progressPercent,
+              (c.lastUpdate || c.lastUpdateAt || ""),
+              (c.installDate || ""),
+              (c.remark || ""),
+              (c.nextStep || "")
+            ]);
+          }
+
+          // logs: state.logs เป็น object by date หรือเป็น array ก็ได้
+          const logs = [];
+          const logsObj = state.logs || {};
+          if (Array.isArray(logsObj)) {
+            for (const l of logsObj) {
+              logs.push([
+                l.date || "",
+                l.time || "",
+                actor,
+                l.sof || "",
+                l.cid || "",
+                l.type || "",
+                l.action || "",
+                l.detail || "",
+                l.remarkSnapshot || "",
+                l.mSnapshot || ""
+              ]);
+            }
+          } else {
+            // object by date
+            const keys = Object.keys(logsObj).sort();
+            for (const d of keys) {
+              for (const l of (logsObj[d] || [])) {
+                logs.push([
+                  d,
+                  l.time || "",
+                  actor,
+                  l.sof || "",
+                  l.cid || "",
+                  l.type || "",
+                  l.action || "",
+                  l.detail || "",
+                  l.remarkSnapshot || "",
+                  l.mSnapshot || ""
+                ]);
+              }
+            }
+          }
+
+          // events
+          const events = [];
+          for (const e of (state.events || [])) {
+            events.push([e.date || "", e.slot || "", e.title || "", e.note || ""]);
+          }
+
+          return { actor, logs, circuits, events, _source: "state" };
+        } catch (e) {
+          // fallthrough to dummy
+        }
       }
-    });
 
-    $("btnLogout").addEventListener("click", async () => {
-      try {
-        const acc = await getAccount();
-        if (!acc) return log("No account to logout");
-        await msalInstance.logoutPopup({ account: acc });
-        log("Signed out");
-        await refreshUI();
-      } catch (e) {
-        console.error(e);
-        log(String(e));
+      // Dummy data เพื่อทดสอบว่าไฟล์สร้างได้
+      const now = new Date();
+      const dd = now.toISOString().slice(0, 10);
+      const tt = now.toTimeString().slice(0, 5);
+
+      return {
+        actor,
+        logs: [[dd, tt, actor, "SOF-TEST", "C-TEST", "DIA", "SYNC_TEST", "dummy payload", "ok", ""]],
+        circuits: [["TEST CIRCUIT", "SOF-TEST", "C-TEST", "DIA", 5, `${dd} ${tt}`, "", "ทดลอง sync", "1. จอง SID"]],
+        events: [],
+        _source: "dummy"
+      };
+    }
+
+    async function postToScript({ force=false } = {}) {
+      const { user, pass } = getCreds();
+      if (!user || !pass) throw new Error("NO_LOGIN");
+
+      if (!force && !isDirty()) {
+        return { skipped: true, reason: "NOT_DIRTY" };
       }
-    });
 
-    $("btnToken").addEventListener("click", async () => {
-      try {
-        const acc = await getAccount();
-        if (!acc) return log("No account. Please Sign in first.");
-        const res = await msalInstance.acquireTokenSilent({ scopes, account: acc })
-          .catch(() => msalInstance.acquireTokenPopup({ scopes, account: acc }));
-        log({ ok: true, username: acc.username, scopes: res.scopes });
-        await refreshUI();
-      } catch (e) {
-        console.error(e);
-        log(String(e));
-      }
-    });
+      const ym = ymNow();
+      const data = buildDataPayload();
 
-    // initial
-    await refreshUI();
-    log("Ready. Click Sign in Microsoft.");
-  }
+      setStatus("Syncing...");
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, pass, ym, data })
+      });
 
-  main().catch(err => {
-    console.error(err);
-    log("Init error: " + String(err));
-  });
-</script>
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "SYNC_FAILED");
+
+      setStatus("✅ Synced to Drive");
+      log({ ok:true, ym, fileName: json.fileName, fileId: json.fileId, source: data._source });
+
+      // sync สำเร็จ -> clear dirty
+      setDirty(false);
+      return json;
+    }
+
+    function startAutoSync() {
+      setInterval(async () => {
+        try {
+          if (!isDirty()) return;
+          await postToScript({ force:false });
+        } catch (e) {
+          console.error(e);
+          setStatus("⚠ Auto-sync failed: " + (e.message || e));
+        }
+      }, AUTO_SYNC_MINUTES * 60 * 1000);
+    }
+
+    /** =========================
+     * UI EVENTS
+     * ========================= **/
+    function initUI() {
+      // เติมค่า creds เดิม
+      const { user, pass } = getCreds();
+      $("u").value = user;
+      $("p").value = pass ? pass : "";
+
+      refreshDirtyPill();
+      setStatus("Ready");
+
+      $("btnSave").onclick = () => {
+        const u = $("u").value.trim();
+        const p = $("p").value;
+        if (!u || !p) { setStatus("⚠ ใส่ user/pass ก่อน"); return; }
+        setCreds(u, p);
+        setStatus("✅ Saved login");
+        log({ ok:true, msg:"saved", user:u });
+      };
+
+      $("btnClear").onclick = () => {
+        clearCreds();
+        $("u").value = "";
+        $("p").value = "";
+        setStatus("Cleared");
+        log("cleared");
+      };
+
+      $("btnSync").onclick = async () => {
+        try {
+          await postToScript({ force:false });
+        } catch (e) {
+          setStatus("❌ Sync failed: " + (e.message || e));
+          log(String(e));
+        }
+      };
+
+      $("btnForceSync").onclick = async () => {
+        try {
+          await postToScript({ force:true });
+        } catch (e) {
+          setStatus("❌ Force sync failed: " + (e.message || e));
+          log(String(e));
+        }
+      };
+
+      $("btnMarkDirty").onclick = () => {
+        setDirty(true);
+        setStatus("Marked dirty (test)");
+      };
+
+      // เริ่ม auto-sync
+      startAutoSync();
+    }
+
+    initUI();
+
+    // ====== IMPORTANT: ให้ checklist เรียกอันนี้เวลา save เพื่อทำ dirty ======
+    // ในไฟล์ checklist ของพี่ ใส่:  window.ProviPortal.markDirty();
+    window.ProviPortal = {
+      markDirty: () => setDirty(true),
+      syncNow: () => postToScript({ force:true })
+    };
+  </script>
 </body>
 </html>
