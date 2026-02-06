@@ -253,22 +253,6 @@
           </a>
         </nav>
 
-        <div class="nav-title" style="margin-top:14px;">Quick actions</div>
-        <div class="nav">
-          <a href="#" id="syncNow">
-            <span>Sync now</span>
-            <span class="tag">Drive</span>
-          </a>
-          <a href="#" id="forceSync">
-            <span>Force sync</span>
-            <span class="tag">Drive</span>
-          </a>
-          <a href="#" id="markDirty">
-            <span>Mark dirty</span>
-            <span class="tag">Test</span>
-          </a>
-        </div>
-
         <div class="statusline">
           <span class="status" id="status">Ready</span>
         </div>
@@ -473,20 +457,6 @@
       };
 
       // nav actions
-      $("openDrive").onclick = (e) => { e.preventDefault(); if(requireLoginOrWarn()) openDriveFolder(); };
-      $("syncNow").onclick = async (e) => {
-        e.preventDefault();
-        if(!requireLoginOrWarn()) return;
-        try { await sendToScript({ force:false }); }
-        catch(err){ setStatus("❌ Sync failed: " + (err.message||err)); log(String(err)); }
-      };
-      $("forceSync").onclick = async (e) => {
-        e.preventDefault();
-        if(!requireLoginOrWarn()) return;
-        try { await sendToScript({ force:true }); }
-        catch(err){ setStatus("❌ Force sync failed: " + (err.message||err)); log(String(err)); }
-      };
-      $("markDirty").onclick = (e) => { e.preventDefault(); if(requireLoginOrWarn()) { setDirty(true); setStatus("Marked dirty"); } };
 
       // ให้ checklist เรียกตอน save:
       window.ProviPortal = {
