@@ -22,21 +22,16 @@
     input,select{background:#0e1520;border:1px solid var(--line);color:var(--text);padding:10px 10px;border-radius:12px;outline:none;min-width:180px}
     pre{white-space:pre-wrap;word-break:break-word;background:#0e1520;border:1px solid var(--line);padding:10px;border-radius:12px;color:#cfe3ff;font-size:12px;margin-top:10px;}
     .pill{font-size:12px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;color:var(--muted)}
+    .hidden{display:none !important;}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>Provisioning Web Portal</h1>
-      <div class="muted">2 Users (local login) + Sync ไป Google Drive (Apps Script) ทุก 60 นาทีเมื่อมีการเปลี่ยนแปลง</div>
+      <div class="muted">ต้อง Login ก่อน ถึงจะเห็นเมนูเข้า Checklist/Config</div>
 
-      <div class="row">
-        <a class="link" href="provi-daily-checklist.html">Provi Daily Checklist</a>
-        <a class="link" href="temp_configuration.html">Temp Configuration</a>
-        <div class="spacer"></div>
-        <span class="pill" id="dirtyPill">dirty: no</span>
-      </div>
-
+      <!-- LOGIN PANEL (always visible) -->
       <div class="row" style="margin-top:14px;">
         <select id="userPick" title="เลือกผู้ใช้">
           <option value="">เลือกผู้ใช้…</option>
@@ -50,17 +45,32 @@
         <div class="muted" id="who">Not logged in</div>
       </div>
 
-      <div class="row">
-        <button class="btn primary" id="btnSync">Sync now</button>
-        <button class="btn" id="btnMarkDirty">Mark dirty</button>
-        <button class="btn danger" id="btnForceSync">Force sync</button>
-        <button class="btn" id="btnOpenFile">Open Drive folder</button>
-        <div class="spacer"></div>
-        <div class="muted" id="status">Ready</div>
+      <!-- PORTAL MENU (hidden until login) -->
+      <div id="portal" class="hidden">
+        <div class="row">
+          <a class="link" href="provi-daily-checklist.html">Provi Daily Checklist</a>
+          <a class="link" href="temp_configuration.html">Temp Configuration</a>
+          <a class="link" id="openDrive" href="#">Open Drive folder</a>
+          <div class="spacer"></div>
+          <span class="pill" id="dirtyPill">dirty: no</span>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="btnSync">Sync now</button>
+          <button class="btn" id="btnMarkDirty">Mark dirty</button>
+          <button class="btn danger" id="btnForceSync">Force sync</button>
+          <div class="spacer"></div>
+          <div class="muted" id="status">Ready</div>
+        </div>
+
+        <div class="muted" style="margin-top:12px;">ดีบัก</div>
+        <pre id="out">-</pre>
       </div>
 
-      <div class="muted" style="margin-top:12px;">ดีบัก</div>
-      <pre id="out">-</pre>
+      <!-- small hint for not logged in -->
+      <div id="hint" class="muted" style="margin-top:12px;">
+        * ถ้ายังไม่ Login จะยังไม่โชว์เมนู
+      </div>
     </div>
   </div>
 
@@ -69,7 +79,7 @@
      * CONFIG
      * ========================= **/
     const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec";
-    const ROOT_DRIVE_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk"; // ProviPortal folder
+    const ROOT_DRIVE_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk";
     const AUTO_SYNC_MINUTES = 60;
 
     const DIRTY_KEY = "provi_dirty";
@@ -96,16 +106,22 @@
     function setSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
     function clearSession(){ localStorage.removeItem(SESSION_KEY); }
 
-    function refreshWho(){
+    function refreshUI(){
       const s = getSession();
-      $("who").textContent = s.user ? `Logged in: ${s.user}` : "Not logged in";
+      const loggedIn = !!(s.user && s.pass);
+
+      $("who").textContent = loggedIn ? `Logged in: ${s.user}` : "Not logged in";
+      $("portal").classList.toggle("hidden", !loggedIn);
+      $("hint").classList.toggle("hidden", loggedIn);
+
+      if (loggedIn) setDirty(isDirty());
     }
 
     function buildPayload(){
       const s = getSession();
       const actor = s.user || "unknown";
 
-      // dummy payload (เพื่อเช็ค sync)
+      // dummy payload (ต่อไปค่อยเปลี่ยนให้ดึง state จริง)
       const now = new Date();
       const dd = now.toISOString().slice(0,10);
       const tt = now.toTimeString().slice(0,5);
@@ -147,7 +163,6 @@
 
     function openDriveFolder(){
       window.open(`https://drive.google.com/drive/folders/${ROOT_DRIVE_FOLDER_ID}`, "_blank");
-      setStatus("Opened Drive folder");
     }
 
     function startAutoSync(){
@@ -157,49 +172,41 @@
           await sendToScript({ force:false });
         }catch(e){
           console.error(e);
-          setStatus("⚠ Auto-sync failed: " + (e.message || e));
+          if ($("status")) setStatus("⚠ Auto-sync failed: " + (e.message || e));
         }
       }, AUTO_SYNC_MINUTES * 60 * 1000);
     }
 
     function init(){
-      setDirty(isDirty());
-      refreshWho();
+      refreshUI();
 
       $("btnLogin").onclick = () => {
         const user = $("userPick").value;
         const pass = $("pass").value;
-        if(!user || !pass){ setStatus("⚠ เลือก user + ใส่รหัส"); return; }
+        if(!user || !pass){ alert("เลือก user และใส่รหัสก่อน"); return; }
         setSession({ user, pass, ymLastSync: "" });
         $("pass").value = "";
-        refreshWho();
-        setStatus("✅ Logged in (local)");
-        log({ ok:true, user });
+        refreshUI();
       };
 
       $("btnLogout").onclick = () => {
         clearSession();
-        refreshWho();
-        setStatus("Logged out");
-        log("logged out");
+        refreshUI();
       };
 
-      $("btnMarkDirty").onclick = () => { setDirty(true); setStatus("Marked dirty"); };
+      $("openDrive").onclick = (e) => { e.preventDefault(); openDriveFolder(); };
 
+      $("btnMarkDirty").onclick = () => { setDirty(true); setStatus("Marked dirty"); };
       $("btnSync").onclick = async () => {
         try { await sendToScript({ force:false }); }
         catch(e){ setStatus("❌ Sync failed: " + (e.message||e)); log(String(e)); }
       };
-
       $("btnForceSync").onclick = async () => {
         try { await sendToScript({ force:true }); }
         catch(e){ setStatus("❌ Force sync failed: " + (e.message||e)); log(String(e)); }
       };
 
-      $("btnOpenFile").onclick = openDriveFolder;
-
       // ให้ checklist เรียกตอน save:
-      // window.ProviPortal.markDirty();
       window.ProviPortal = {
         markDirty: () => setDirty(true),
         forceSync: () => sendToScript({ force:true }),
@@ -207,8 +214,8 @@
       };
 
       startAutoSync();
-      setStatus("Ready");
-      log("Ready. Login แล้วกด Force sync เพื่อทดสอบ");
+      if ($("status")) setStatus("Ready");
+      if ($("out")) log("Ready. Login แล้วจะเห็นเมนู");
     }
 
     init();
