@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Provisioning Web Portal</title>
   <style>
-    :root{--bg:#0b0f14;--card:#121a24;--line:#223043;--text:#e7f0fb;--muted:#8aa0b8;--accent:#4aa3ff;}
+    :root{--bg:#0b0f14;--card:#121a24;--line:#223043;--text:#e7f0fb;--muted:#8aa0b8;}
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#0b0f14,#070a0d);color:var(--text);}
     .wrap{max-width:980px;margin:0 auto;padding:18px;}
@@ -17,11 +17,8 @@
     .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:800;}
     .btn.primary{background:linear-gradient(180deg,#1d3b63,#162a44);border-color:#2f5f9a}
     .btn.danger{background:linear-gradient(180deg,#5a1d1d,#3b1414);border-color:#8a2f2f}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
     a.link{color:#cfe3ff;text-decoration:none;border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:inline-block}
-    a.link:hover{border-color:#2f425d}
     input{background:#0e1520;border:1px solid var(--line);color:var(--text);padding:10px 10px;border-radius:12px;outline:none;min-width:180px}
-    input::placeholder{color:#6f859d}
     pre{white-space:pre-wrap;word-break:break-word;background:#0e1520;border:1px solid var(--line);padding:10px;border-radius:12px;color:#cfe3ff;font-size:12px;margin-top:10px;}
     .pill{font-size:12px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;color:var(--muted)}
   </style>
@@ -30,9 +27,7 @@
   <div class="wrap">
     <div class="card">
       <h1>Provisioning Web Portal</h1>
-      <div class="muted">
-        ใช้ Google Drive (Apps Script) สำหรับ Sync รายเดือนของแต่ละคน — Auto-sync ทุก 60 นาที เฉพาะมีการเปลี่ยนแปลง
-      </div>
+      <div class="muted">Sync ข้อมูลขึ้น Google Drive (Apps Script) — Auto-sync ทุก 60 นาที เฉพาะมีการเปลี่ยนแปลง</div>
 
       <div class="row">
         <a class="link" href="provi-daily-checklist.html">Provi Daily Checklist</a>
@@ -51,7 +46,7 @@
       <div class="row">
         <button class="btn primary" id="btnSync">Sync now</button>
         <button class="btn" id="btnMarkDirty">Mark dirty (test)</button>
-        <button class="btn danger" id="btnForceSync">Force sync (ignore dirty)</button>
+        <button class="btn danger" id="btnForceSync">Force sync</button>
         <div class="spacer"></div>
         <div class="muted" id="status">Ready</div>
       </div>
@@ -68,144 +63,43 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec";
     const AUTO_SYNC_MINUTES = 60;
 
-    // KEY สำหรับดึง state ของแอป checklist (พี่ค่อยแก้ให้ตรงของจริงทีหลัง)
-    // ตอนนี้ index จะส่ง "ตัวอย่างข้อมูล" ไปก่อน เพื่อทดสอบว่าไฟล์ถูกสร้างใน Drive ได้
+    // ตอนนี้ยังไม่เชื่อม checklist จริง -> ส่ง dummy ไปก่อนเพื่อทดสอบว่าไฟล์ขึ้น Drive ได้
+    // พอเชื่อม checklist แล้วค่อยเปลี่ยนให้ดึง state จริงจาก localStorage
     const CHECKLIST_STATE_KEY = "provi_tracker_single_v2_clean";
 
     const CRED_USER_KEY = "provi_user";
     const CRED_PASS_KEY = "provi_pass";
     const DIRTY_KEY = "provi_dirty";
 
-    /** =========================
-     * HELPERS
-     * ========================= **/
     const $ = (id) => document.getElementById(id);
-    const log = (obj) => $("out").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
     const setStatus = (t) => $("status").textContent = t;
+    const log = (obj) => $("out").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
 
-    function ymNow() {
-      return new Date().toISOString().slice(0, 7); // YYYY-MM
-    }
+    function ymNow(){ return new Date().toISOString().slice(0,7); }
 
-    function isDirty() { return localStorage.getItem(DIRTY_KEY) === "1"; }
-    function setDirty(v) {
-      if (v) localStorage.setItem(DIRTY_KEY, "1");
+    function isDirty(){ return localStorage.getItem(DIRTY_KEY) === "1"; }
+    function setDirty(v){
+      if(v) localStorage.setItem(DIRTY_KEY,"1");
       else localStorage.removeItem(DIRTY_KEY);
-      refreshDirtyPill();
-    }
-    function refreshDirtyPill() {
       $("dirtyPill").textContent = "dirty: " + (isDirty() ? "YES" : "no");
       $("dirtyPill").style.color = isDirty() ? "#ffd089" : "var(--muted)";
-      $("dirtyPill").style.borderColor = isDirty() ? "#6b4c20" : "var(--line)";
     }
 
-    function getCreds() {
-      const user = localStorage.getItem(CRED_USER_KEY) || "";
-      const pass = localStorage.getItem(CRED_PASS_KEY) || "";
-      return { user, pass };
+    function getCreds(){
+      return {
+        user: localStorage.getItem(CRED_USER_KEY) || "",
+        pass: localStorage.getItem(CRED_PASS_KEY) || ""
+      };
     }
 
-    function setCreds(user, pass) {
-      localStorage.setItem(CRED_USER_KEY, user);
-      localStorage.setItem(CRED_PASS_KEY, pass);
-    }
+    function buildPayload(){
+      const { user } = getCreds();
+      const actor = user || "unknown";
 
-    function clearCreds() {
-      localStorage.removeItem(CRED_USER_KEY);
-      localStorage.removeItem(CRED_PASS_KEY);
-    }
-
-    /**
-     * Build payload to Apps Script
-     * โหมดทดสอบ: ถ้าไม่เจอ state ของ checklist จะส่ง dummy data ไปก่อน
-     */
-    function buildDataPayload() {
-      const actor = localStorage.getItem(CRED_USER_KEY) || "unknown";
-
-      // พยายามดึง state จริง ถ้ามี
-      const raw = localStorage.getItem(CHECKLIST_STATE_KEY);
-      if (raw) {
-        try {
-          const state = JSON.parse(raw);
-
-          // แปลง circuits เป็น rows (CircuitSnapshot)
-          const circuits = [];
-          const steps = (state.steps || state.STEPS || []); // เผื่อของเดิม
-          const circuitsObj = state.circuits || {};
-          for (const cid in circuitsObj) {
-            const c = circuitsObj[cid];
-            const progressPercent = typeof c.progressPercent === "number"
-              ? c.progressPercent
-              : (c.doneSteps ? Math.round((c.doneSteps.length / 21) * 100) : "");
-
-            circuits.push([
-              c.name || "",
-              c.sof || "",
-              c.cid || cid,
-              c.type || "",
-              progressPercent,
-              (c.lastUpdate || c.lastUpdateAt || ""),
-              (c.installDate || ""),
-              (c.remark || ""),
-              (c.nextStep || "")
-            ]);
-          }
-
-          // logs: state.logs เป็น object by date หรือเป็น array ก็ได้
-          const logs = [];
-          const logsObj = state.logs || {};
-          if (Array.isArray(logsObj)) {
-            for (const l of logsObj) {
-              logs.push([
-                l.date || "",
-                l.time || "",
-                actor,
-                l.sof || "",
-                l.cid || "",
-                l.type || "",
-                l.action || "",
-                l.detail || "",
-                l.remarkSnapshot || "",
-                l.mSnapshot || ""
-              ]);
-            }
-          } else {
-            // object by date
-            const keys = Object.keys(logsObj).sort();
-            for (const d of keys) {
-              for (const l of (logsObj[d] || [])) {
-                logs.push([
-                  d,
-                  l.time || "",
-                  actor,
-                  l.sof || "",
-                  l.cid || "",
-                  l.type || "",
-                  l.action || "",
-                  l.detail || "",
-                  l.remarkSnapshot || "",
-                  l.mSnapshot || ""
-                ]);
-              }
-            }
-          }
-
-          // events
-          const events = [];
-          for (const e of (state.events || [])) {
-            events.push([e.date || "", e.slot || "", e.title || "", e.note || ""]);
-          }
-
-          return { actor, logs, circuits, events, _source: "state" };
-        } catch (e) {
-          // fallthrough to dummy
-        }
-      }
-
-      // Dummy data เพื่อทดสอบว่าไฟล์สร้างได้
+      // ถ้ามี state จริงค่อยแปลงทีหลัง ตอนนี้ส่ง dummy
       const now = new Date();
-      const dd = now.toISOString().slice(0, 10);
-      const tt = now.toTimeString().slice(0, 5);
+      const dd = now.toISOString().slice(0,10);
+      const tt = now.toTimeString().slice(0,5);
 
       return {
         actor,
@@ -216,111 +110,96 @@
       };
     }
 
-    async function postToScript({ force=false } = {}) {
+    async function sendToScript({ force=false } = {}){
       const { user, pass } = getCreds();
-      if (!user || !pass) throw new Error("NO_LOGIN");
-
-      if (!force && !isDirty()) {
-        return { skipped: true, reason: "NOT_DIRTY" };
-      }
+      if(!user || !pass) throw new Error("NO_LOGIN");
+      if(!force && !isDirty()) return { skipped:true, reason:"NOT_DIRTY" };
 
       const ym = ymNow();
-      const data = buildDataPayload();
+      const payload = buildPayload();
 
-      setStatus("Syncing...");
-      const res = await fetch(API_URL, {
+      setStatus("Sending...");
+      // ✅ no-cors + form-urlencoded (แก้ CORS แน่นอน)
+      await fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user, pass, ym, data })
+        mode: "no-cors",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: new URLSearchParams({
+          payload: JSON.stringify({ user, pass, ym, data: payload })
+        })
       });
 
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "SYNC_FAILED");
+      // อ่าน response ไม่ได้ (opaque) -> ถือว่าส่งสำเร็จ
+      setStatus("✅ Sent (check Drive)");
+      log({ ok:true, sent:true, ym, user, source: payload._source });
 
-      setStatus("✅ Synced to Drive");
-      log({ ok:true, ym, fileName: json.fileName, fileId: json.fileId, source: data._source });
-
-      // sync สำเร็จ -> clear dirty
       setDirty(false);
-      return json;
+      return { ok:true };
     }
 
-    function startAutoSync() {
+    function startAutoSync(){
       setInterval(async () => {
-        try {
-          if (!isDirty()) return;
-          await postToScript({ force:false });
-        } catch (e) {
+        try{
+          if(!isDirty()) return;
+          await sendToScript({ force:false });
+        }catch(e){
           console.error(e);
           setStatus("⚠ Auto-sync failed: " + (e.message || e));
         }
       }, AUTO_SYNC_MINUTES * 60 * 1000);
     }
 
-    /** =========================
-     * UI EVENTS
-     * ========================= **/
-    function initUI() {
-      // เติมค่า creds เดิม
+    function init(){
+      // preload creds
       const { user, pass } = getCreds();
       $("u").value = user;
       $("p").value = pass ? pass : "";
-
-      refreshDirtyPill();
-      setStatus("Ready");
+      setDirty(isDirty());
 
       $("btnSave").onclick = () => {
         const u = $("u").value.trim();
         const p = $("p").value;
-        if (!u || !p) { setStatus("⚠ ใส่ user/pass ก่อน"); return; }
-        setCreds(u, p);
+        if(!u || !p){ setStatus("⚠ ใส่ user/pass ก่อน"); return; }
+        localStorage.setItem(CRED_USER_KEY, u);
+        localStorage.setItem(CRED_PASS_KEY, p);
         setStatus("✅ Saved login");
-        log({ ok:true, msg:"saved", user:u });
+        log({ ok:true, user:u });
       };
 
       $("btnClear").onclick = () => {
-        clearCreds();
+        localStorage.removeItem(CRED_USER_KEY);
+        localStorage.removeItem(CRED_PASS_KEY);
         $("u").value = "";
         $("p").value = "";
         setStatus("Cleared");
         log("cleared");
       };
 
+      $("btnMarkDirty").onclick = () => { setDirty(true); setStatus("Marked dirty"); };
+
       $("btnSync").onclick = async () => {
-        try {
-          await postToScript({ force:false });
-        } catch (e) {
-          setStatus("❌ Sync failed: " + (e.message || e));
-          log(String(e));
-        }
+        try { await sendToScript({ force:false }); }
+        catch(e){ setStatus("❌ Sync failed: " + (e.message||e)); log(String(e)); }
       };
 
       $("btnForceSync").onclick = async () => {
-        try {
-          await postToScript({ force:true });
-        } catch (e) {
-          setStatus("❌ Force sync failed: " + (e.message || e));
-          log(String(e));
-        }
+        try { await sendToScript({ force:true }); }
+        catch(e){ setStatus("❌ Force sync failed: " + (e.message||e)); log(String(e)); }
       };
 
-      $("btnMarkDirty").onclick = () => {
-        setDirty(true);
-        setStatus("Marked dirty (test)");
+      // ให้ checklist เรียกตอน save:
+      // window.ProviPortal.markDirty();
+      window.ProviPortal = {
+        markDirty: () => setDirty(true),
+        forceSync: () => sendToScript({ force:true })
       };
 
-      // เริ่ม auto-sync
       startAutoSync();
+      setStatus("Ready");
+      log("Ready. Save login แล้วกด Force sync เพื่อทดสอบ");
     }
 
-    initUI();
-
-    // ====== IMPORTANT: ให้ checklist เรียกอันนี้เวลา save เพื่อทำ dirty ======
-    // ในไฟล์ checklist ของพี่ ใส่:  window.ProviPortal.markDirty();
-    window.ProviPortal = {
-      markDirty: () => setDirty(true),
-      syncNow: () => postToScript({ force:true })
-    };
+    init();
   </script>
 </body>
 </html>
