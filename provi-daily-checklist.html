@@ -382,9 +382,17 @@ function nowParts(){
 }
 function uuid(){ return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16); }
 
+const SESSION_KEY = "provi_session"; // ต้องตรงกับ index.html
+
 function getUser(){
-  return (window.ProviPortal && window.ProviPortal.getUser && window.ProviPortal.getUser()) || "unknown";
+  try{
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
+    return (s.user || "").trim() || "unknown";
+  }catch(e){
+    return "unknown";
+  }
 }
+
 
 function loadState(){
   try { return JSON.parse(localStorage.getItem(KEY) || "{}"); }
