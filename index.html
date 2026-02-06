@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Provisioning Web Portal</title>
+  <title>Provi Portal</title>
   <style>
     :root{--bg:#0b0f14;--card:#121a24;--line:#223043;--text:#e7f0fb;--muted:#8aa0b8;}
     *{box-sizing:border-box}
@@ -17,8 +17,9 @@
     .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:800;}
     .btn.primary{background:linear-gradient(180deg,#1d3b63,#162a44);border-color:#2f5f9a}
     .btn.danger{background:linear-gradient(180deg,#5a1d1d,#3b1414);border-color:#8a2f2f}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
     a.link{color:#cfe3ff;text-decoration:none;border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:inline-block}
-    input{background:#0e1520;border:1px solid var(--line);color:var(--text);padding:10px 10px;border-radius:12px;outline:none;min-width:180px}
+    input,select{background:#0e1520;border:1px solid var(--line);color:var(--text);padding:10px 10px;border-radius:12px;outline:none;min-width:180px}
     pre{white-space:pre-wrap;word-break:break-word;background:#0e1520;border:1px solid var(--line);padding:10px;border-radius:12px;color:#cfe3ff;font-size:12px;margin-top:10px;}
     .pill{font-size:12px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;color:var(--muted)}
   </style>
@@ -27,7 +28,7 @@
   <div class="wrap">
     <div class="card">
       <h1>Provisioning Web Portal</h1>
-      <div class="muted">Sync ข้อมูลขึ้น Google Drive (Apps Script) — Auto-sync ทุก 60 นาที เฉพาะมีการเปลี่ยนแปลง</div>
+      <div class="muted">2 Users (local login) + Sync ไป Google Drive (Apps Script) ทุก 60 นาทีเมื่อมีการเปลี่ยนแปลง</div>
 
       <div class="row">
         <a class="link" href="provi-daily-checklist.html">Provi Daily Checklist</a>
@@ -37,16 +38,23 @@
       </div>
 
       <div class="row" style="margin-top:14px;">
-        <input id="u" placeholder="user (เช่น Admin)" />
-        <input id="p" placeholder="password" type="password" />
-        <button class="btn primary" id="btnSave">Save login</button>
-        <button class="btn" id="btnClear">Clear</button>
+        <select id="userPick" title="เลือกผู้ใช้">
+          <option value="">เลือกผู้ใช้…</option>
+          <option value="Patcharapong">Patcharapong</option>
+          <option value="Nawaphon">Nawaphon</option>
+        </select>
+        <input id="pass" placeholder="password" type="password" />
+        <button class="btn primary" id="btnLogin">Login</button>
+        <button class="btn" id="btnLogout">Logout</button>
+        <div class="spacer"></div>
+        <div class="muted" id="who">Not logged in</div>
       </div>
 
       <div class="row">
         <button class="btn primary" id="btnSync">Sync now</button>
-        <button class="btn" id="btnMarkDirty">Mark dirty (test)</button>
+        <button class="btn" id="btnMarkDirty">Mark dirty</button>
         <button class="btn danger" id="btnForceSync">Force sync</button>
+        <button class="btn" id="btnOpenFile">Open Drive folder</button>
         <div class="spacer"></div>
         <div class="muted" id="status">Ready</div>
       </div>
@@ -61,15 +69,11 @@
      * CONFIG
      * ========================= **/
     const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec";
+    const ROOT_DRIVE_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk"; // ProviPortal folder
     const AUTO_SYNC_MINUTES = 60;
 
-    // ตอนนี้ยังไม่เชื่อม checklist จริง -> ส่ง dummy ไปก่อนเพื่อทดสอบว่าไฟล์ขึ้น Drive ได้
-    // พอเชื่อม checklist แล้วค่อยเปลี่ยนให้ดึง state จริงจาก localStorage
-    const CHECKLIST_STATE_KEY = "provi_tracker_single_v2_clean";
-
-    const CRED_USER_KEY = "provi_user";
-    const CRED_PASS_KEY = "provi_pass";
     const DIRTY_KEY = "provi_dirty";
+    const SESSION_KEY = "provi_session"; // {user,pass,ymLastSync}
 
     const $ = (id) => document.getElementById(id);
     const setStatus = (t) => $("status").textContent = t;
@@ -85,56 +89,65 @@
       $("dirtyPill").style.color = isDirty() ? "#ffd089" : "var(--muted)";
     }
 
-    function getCreds(){
-      return {
-        user: localStorage.getItem(CRED_USER_KEY) || "",
-        pass: localStorage.getItem(CRED_PASS_KEY) || ""
-      };
+    function getSession(){
+      try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"); }
+      catch { return {}; }
+    }
+    function setSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+    function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+
+    function refreshWho(){
+      const s = getSession();
+      $("who").textContent = s.user ? `Logged in: ${s.user}` : "Not logged in";
     }
 
     function buildPayload(){
-      const { user } = getCreds();
-      const actor = user || "unknown";
+      const s = getSession();
+      const actor = s.user || "unknown";
 
-      // ถ้ามี state จริงค่อยแปลงทีหลัง ตอนนี้ส่ง dummy
+      // dummy payload (เพื่อเช็ค sync)
       const now = new Date();
       const dd = now.toISOString().slice(0,10);
       const tt = now.toTimeString().slice(0,5);
 
       return {
         actor,
-        logs: [[dd, tt, actor, "SOF-TEST", "C-TEST", "DIA", "SYNC_TEST", "dummy payload", "ok", ""]],
-        circuits: [["TEST CIRCUIT", "SOF-TEST", "C-TEST", "DIA", 5, `${dd} ${tt}`, "", "ทดลอง sync", "1. จอง SID"]],
+        logs: [[dd, tt, actor, "SOF-TEST", "C-TEST", "DIA", "SYNC_TEST", "from portal", "ok", ""]],
+        circuits: [[`${actor} TEST CIRCUIT`, "SOF-TEST", "C-TEST", "DIA", 5, `${dd} ${tt}`, "", "ทดลอง sync", "1. จอง SID"]],
         events: [],
         _source: "dummy"
       };
     }
 
     async function sendToScript({ force=false } = {}){
-      const { user, pass } = getCreds();
-      if(!user || !pass) throw new Error("NO_LOGIN");
+      const s = getSession();
+      if(!s.user || !s.pass) throw new Error("NOT_LOGGED_IN");
       if(!force && !isDirty()) return { skipped:true, reason:"NOT_DIRTY" };
 
       const ym = ymNow();
       const payload = buildPayload();
 
       setStatus("Sending...");
-      // ✅ no-cors + form-urlencoded (แก้ CORS แน่นอน)
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
         body: new URLSearchParams({
-          payload: JSON.stringify({ user, pass, ym, data: payload })
+          payload: JSON.stringify({ user: s.user, pass: s.pass, ym, data: payload })
         })
       });
 
-      // อ่าน response ไม่ได้ (opaque) -> ถือว่าส่งสำเร็จ
       setStatus("✅ Sent (check Drive)");
-      log({ ok:true, sent:true, ym, user, source: payload._source });
+      log({ ok:true, sent:true, ym, user:s.user, source: payload._source });
 
       setDirty(false);
+      setSession({ ...s, ymLastSync: ym });
       return { ok:true };
+    }
+
+    function openDriveFolder(){
+      window.open(`https://drive.google.com/drive/folders/${ROOT_DRIVE_FOLDER_ID}`, "_blank");
+      setStatus("Opened Drive folder");
     }
 
     function startAutoSync(){
@@ -150,29 +163,25 @@
     }
 
     function init(){
-      // preload creds
-      const { user, pass } = getCreds();
-      $("u").value = user;
-      $("p").value = pass ? pass : "";
       setDirty(isDirty());
+      refreshWho();
 
-      $("btnSave").onclick = () => {
-        const u = $("u").value.trim();
-        const p = $("p").value;
-        if(!u || !p){ setStatus("⚠ ใส่ user/pass ก่อน"); return; }
-        localStorage.setItem(CRED_USER_KEY, u);
-        localStorage.setItem(CRED_PASS_KEY, p);
-        setStatus("✅ Saved login");
-        log({ ok:true, user:u });
+      $("btnLogin").onclick = () => {
+        const user = $("userPick").value;
+        const pass = $("pass").value;
+        if(!user || !pass){ setStatus("⚠ เลือก user + ใส่รหัส"); return; }
+        setSession({ user, pass, ymLastSync: "" });
+        $("pass").value = "";
+        refreshWho();
+        setStatus("✅ Logged in (local)");
+        log({ ok:true, user });
       };
 
-      $("btnClear").onclick = () => {
-        localStorage.removeItem(CRED_USER_KEY);
-        localStorage.removeItem(CRED_PASS_KEY);
-        $("u").value = "";
-        $("p").value = "";
-        setStatus("Cleared");
-        log("cleared");
+      $("btnLogout").onclick = () => {
+        clearSession();
+        refreshWho();
+        setStatus("Logged out");
+        log("logged out");
       };
 
       $("btnMarkDirty").onclick = () => { setDirty(true); setStatus("Marked dirty"); };
@@ -187,16 +196,19 @@
         catch(e){ setStatus("❌ Force sync failed: " + (e.message||e)); log(String(e)); }
       };
 
+      $("btnOpenFile").onclick = openDriveFolder;
+
       // ให้ checklist เรียกตอน save:
       // window.ProviPortal.markDirty();
       window.ProviPortal = {
         markDirty: () => setDirty(true),
-        forceSync: () => sendToScript({ force:true })
+        forceSync: () => sendToScript({ force:true }),
+        getUser: () => (getSession().user || "")
       };
 
       startAutoSync();
       setStatus("Ready");
-      log("Ready. Save login แล้วกด Force sync เพื่อทดสอบ");
+      log("Ready. Login แล้วกด Force sync เพื่อทดสอบ");
     }
 
     init();
