@@ -28,7 +28,6 @@
       min-height:100vh;
     }
 
-    /* Topbar */
     .topbar{
       position:sticky; top:0; z-index:10;
       backdrop-filter: blur(10px);
@@ -50,6 +49,7 @@
       box-shadow: 0 10px 30px rgba(255,122,24,.18);
       display:grid; place-items:center;
       font-weight:1000;
+      color:#1a0d05;
     }
     .brand small{display:block; font-weight:700; color:var(--muted); margin-top:2px; letter-spacing:0}
     .spacer{flex:1}
@@ -79,12 +79,9 @@
       border-color: rgba(255,122,24,.55);
       color:#1a0d05;
     }
-    .btn.ghost{
-      background: rgba(16,24,38,.35);
-    }
+    .btn.ghost{background: rgba(16,24,38,.35);}
     .btn:disabled{opacity:.55;cursor:not-allowed}
 
-    /* Layout */
     .container{max-width:1200px; margin:0 auto; padding:16px;}
     .layout{
       display:grid;
@@ -93,7 +90,6 @@
       align-items:start;
     }
 
-    /* Sidebar */
     .sidebar{
       border:1px solid rgba(36,52,73,.75);
       background: rgba(16,24,38,.65);
@@ -128,7 +124,6 @@
       background: rgba(16,24,38,.55);
     }
 
-    /* Main */
     .main{
       border:1px solid rgba(36,52,73,.75);
       background: rgba(16,24,38,.55);
@@ -159,11 +154,8 @@
     }
     .card h3{margin:0; font-size:14px;}
     .card p{margin:6px 0 0; font-size:12px; color:var(--muted); line-height:1.5}
-    .statusline{margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .status{font-size:12px; color:var(--muted)}
     .hidden{display:none !important;}
 
-    /* Login Overlay */
     .overlay{
       position:fixed; inset:0;
       display:grid; place-items:center;
@@ -211,7 +203,6 @@
 </head>
 <body>
 
-  <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-inner">
       <div class="brand">
@@ -225,7 +216,6 @@
       <div class="spacer"></div>
 
       <div class="userbox">
-        <span class="pill" id="dirtyPill">dirty: no</span>
         <span class="pill" id="who">Not logged in</span>
         <button class="btn ghost hidden" id="btnLogout">Logout</button>
       </div>
@@ -235,7 +225,6 @@
   <div class="container">
     <div class="layout">
 
-      <!-- SIDEBAR -->
       <aside class="sidebar">
         <div class="nav-title">Navigation</div>
         <nav class="nav" id="nav">
@@ -253,20 +242,19 @@
           </a>
         </nav>
 
-        <div class="statusline">
-          <span class="status" id="status">Ready</span>
+        <div style="margin-top:12px;color:var(--muted);font-size:12px;line-height:1.5;">
+          * เมนูเพิ่มได้ในอนาคต<br/>
+          * Login แล้วถึงใช้งานได้
         </div>
       </aside>
 
-      <!-- MAIN -->
       <main class="main">
         <div class="hero">
           <h2>Announcement / Dashboard</h2>
           <p>
             พื้นที่ตรงกลางไว้ประกาศงาน / แจ้งเตือน / หรือสรุปสถานะภาพรวมในอนาคต
-            (ตอนนี้ยังเป็นหน้าเริ่มต้น)
           </p>
-          <div class="statusline">
+          <div style="margin-top:10px;">
             <span class="pill" id="userHint">Login เพื่อเริ่มใช้งาน</span>
           </div>
         </div>
@@ -274,25 +262,22 @@
         <div class="grid">
           <div class="card">
             <h3>Today focus</h3>
-            <p>รายการวงจรที่ต้องทำวันนี้ / ค้าง / ใกล้วันติดตั้ง (ไว้ใส่ในเฟสถัดไป)</p>
+            <p>ไว้สรุปงานค้าง/งานด่วน/ใกล้วันติดตั้ง (ทำต่อในเฟสถัดไป)</p>
           </div>
           <div class="card">
-            <h3>Sync policy</h3>
-            <p>Auto-sync ทุก 60 นาที เฉพาะเมื่อมีการเปลี่ยนแปลง (dirty)</p>
+            <h3>Policy</h3>
+            <p>Sync ผ่าน Apps Script → Drive/Sheet รายเดือนแยก user</p>
           </div>
           <div class="card">
             <h3>Notes</h3>
-            <p>บันทึกแนวทาง/ประกาศของทีม Provisioning (พี่ค่อยแก้ข้อความได้)</p>
+            <p>พี่แก้ข้อความประกาศตรงกลางได้ตามต้องการ</p>
           </div>
         </div>
-
-        <pre id="out" class="hidden">-</pre>
       </main>
 
     </div>
   </div>
 
-  <!-- LOGIN OVERLAY -->
   <div class="overlay" id="overlay">
     <div class="login">
       <h2>Login</h2>
@@ -309,7 +294,7 @@
       </div>
 
       <div class="sub" style="margin-top:10px;">
-        * หลัง Login แล้ว กล่องนี้จะหายไป เหลือปุ่ม Logout มุมขวาบน
+        * Login แล้ว กล่องนี้จะหายไป เหลือ Logout มุมขวาบน
       </div>
 
       <pre id="loginDebug">-</pre>
@@ -317,35 +302,13 @@
   </div>
 
   <script>
-    /** =========================
-     * CONFIG
-     * ========================= **/
-    const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec";
     const ROOT_DRIVE_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk";
-    const AUTO_SYNC_MINUTES = 60;
-
-    const DIRTY_KEY = "provi_dirty";
     const SESSION_KEY = "provi_session"; // {user,pass,ymLastSync}
 
     const $ = (id) => document.getElementById(id);
-    const setStatus = (t) => $("status").textContent = t;
-    const log = (obj) => {
-      const txt = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
-      const out = $("out"); if(out) out.textContent = txt;
-    };
     const logLogin = (obj) => {
       $("loginDebug").textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
     };
-
-    function ymNow(){ return new Date().toISOString().slice(0,7); }
-
-    function isDirty(){ return localStorage.getItem(DIRTY_KEY) === "1"; }
-    function setDirty(v){
-      if(v) localStorage.setItem(DIRTY_KEY,"1");
-      else localStorage.removeItem(DIRTY_KEY);
-      $("dirtyPill").textContent = "dirty: " + (isDirty() ? "YES" : "no");
-      $("dirtyPill").style.color = isDirty() ? "var(--warn)" : "var(--muted)";
-    }
 
     function getSession(){
       try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"); }
@@ -361,61 +324,8 @@
       $("who").textContent = loggedIn ? `Logged in: ${s.user}` : "Not logged in";
       $("btnLogout").classList.toggle("hidden", !loggedIn);
       $("overlay").classList.toggle("hidden", loggedIn);
-
       $("userHint").textContent = loggedIn ? `Welcome, ${s.user}` : "Login เพื่อเริ่มใช้งาน";
-      setDirty(isDirty());
-
-      // กันคนยังไม่ login กด nav (optional)
-      const nav = $("nav");
-      if (nav) nav.style.opacity = loggedIn ? "1" : ".55";
-    }
-
-    function buildPayload(){
-      const s = getSession();
-      const actor = s.user || "unknown";
-
-      // dummy payload (เดี๋ยวเฟสถัดไปค่อยเปลี่ยนให้ดึง state จริงจาก checklist)
-      const now = new Date();
-      const dd = now.toISOString().slice(0,10);
-      const tt = now.toTimeString().slice(0,5);
-
-      return {
-        actor,
-        logs: [[dd, tt, actor, "SOF-TEST", "C-TEST", "DIA", "SYNC_TEST", "from portal", "ok", ""]],
-        circuits: [[`${actor} TEST CIRCUIT`, "SOF-TEST", "C-TEST", "DIA", 5, `${dd} ${tt}`, "", "ทดลอง sync", "1. จอง SID"]],
-        events: [],
-        _source: "dummy"
-      };
-    }
-
-    async function sendToScript({ force=false } = {}){
-      const s = getSession();
-      if(!s.user || !s.pass) throw new Error("NOT_LOGGED_IN");
-      if(!force && !isDirty()) return { skipped:true, reason:"NOT_DIRTY" };
-
-      const ym = ymNow();
-      const payload = buildPayload();
-
-      setStatus("Sending...");
-      await fetch(API_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: new URLSearchParams({
-          payload: JSON.stringify({ user: s.user, pass: s.pass, ym, data: payload })
-        })
-      });
-
-      setStatus("✅ Sent (check Drive)");
-      log({ ok:true, sent:true, ym, user:s.user, source: payload._source });
-
-      setDirty(false);
-      setSession({ ...s, ymLastSync: ym });
-      return { ok:true };
-    }
-
-    function openDriveFolder(){
-      window.open(`https://drive.google.com/drive/folders/${ROOT_DRIVE_FOLDER_ID}`, "_blank");
+      $("nav").style.opacity = loggedIn ? "1" : ".55";
     }
 
     function requireLoginOrWarn(){
@@ -425,27 +335,12 @@
       return false;
     }
 
-    function startAutoSync(){
-      setInterval(async () => {
-        try{
-          if(!isDirty()) return;
-          await sendToScript({ force:false });
-        }catch(e){
-          console.error(e);
-          setStatus("⚠ Auto-sync failed: " + (e.message || e));
-        }
-      }, AUTO_SYNC_MINUTES * 60 * 1000);
+    function openDriveFolder(){
+      window.open(`https://drive.google.com/drive/folders/${ROOT_DRIVE_FOLDER_ID}`, "_blank");
     }
 
     function init(){
-      // top right logout
-      $("btnLogout").onclick = () => {
-        clearSession();
-        refreshUI();
-        setStatus("Logged out");
-      };
-
-      // overlay login
+      $("btnLogout").onclick = () => { clearSession(); refreshUI(); };
       $("btnLogin").onclick = () => {
         const user = $("userPick").value;
         const pass = $("pass").value;
@@ -455,22 +350,11 @@
         logLogin({ ok:true, user });
         refreshUI();
       };
-
-      // nav actions
-
-      // ให้ checklist เรียกตอน save:
-      window.ProviPortal = {
-        markDirty: () => setDirty(true),
-        forceSync: () => sendToScript({ force:true }),
-        getUser: () => (getSession().user || "")
-      };
+      $("openDrive").onclick = (e)=>{ e.preventDefault(); if(requireLoginOrWarn()) openDriveFolder(); };
 
       refreshUI();
-      startAutoSync();
-      setStatus("Ready");
       logLogin("Ready. Please login.");
     }
-
     init();
   </script>
 </body>
