@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Provi Daily Checklist</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#101826;
+      --panel2:#0f1722;
+      --line:#243449;
+      --text:#eaf2ff;
+      --muted:#8fa4be;
+      --accent:#ff7a18;
+      --accent2:#ff9a3c;
+      --ok:#37d67a;
+      --warn:#ffd089;
+      --bad:#ff5a5a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: radial-gradient(1200px 600px at 10% 0%, rgba(255,122,24,.12), transparent 55%),
+                  linear-gradient(180deg,#0b0f14,#070a0d);
+      color:var(--text);min-height:100vh;
+    }
+    .topbar{
+      position:sticky;top:0;z-index:10;
+      backdrop-filter: blur(10px);
+      background: rgba(11,15,20,.65);
+      border-bottom:1px solid rgba(36,52,73,.65);
+    }
+    .topbar-inner{
+      max-width:1200px;margin:0 auto;padding:12px 16px;
+      display:flex;align-items:center;gap:12px;
+    }
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900}
+    .logo{
+      width:34px;height:34px;border-radius:12px;
+      background: linear-gradient(180deg, var(--accent), #d85f0f);
+      display:grid;place-items:center;color:#1a0d05;font-weight:1000;
+      box-shadow: 0 10px 30px rgba(255,122,24,.18);
+    }
+    .spacer{flex:1}
+    .pill{border:1px solid rgba(36,52,73,.9);background: rgba(16,24,38,.55);
+      padding:6px 10px;border-radius:999px;color:var(--muted);font-size:12px}
+    .btn{
+      border:1px solid rgba(36,52,73,.9);
+      background: rgba(16,24,38,.55);
+      color:var(--text);padding:9px 12px;border-radius:12px;cursor:pointer;font-weight:900;
+    }
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(255,122,24,.95), rgba(216,95,15,.95));
+      border-color: rgba(255,122,24,.55);color:#1a0d05;
+    }
+    .btn.ghost{background: rgba(16,24,38,.25);}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+
+    .container{max-width:1200px;margin:0 auto;padding:16px;}
+    .layout{display:grid;grid-template-columns: 320px 1fr;gap:14px;align-items:start;}
+    @media (max-width: 980px){ .layout{grid-template-columns:1fr;} }
+
+    .card{
+      border:1px solid rgba(36,52,73,.75);
+      background: rgba(16,24,38,.55);
+      border-radius:18px;padding:14px;
+    }
+    h2{margin:0;font-size:16px}
+    .muted{color:var(--muted);font-size:12px;line-height:1.5;margin-top:6px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    input,select,textarea{
+      background: rgba(14,21,32,.95);
+      border:1px solid rgba(36,52,73,.9);
+      color:var(--text);
+      padding:10px 10px;
+      border-radius:12px;
+      outline:none;
+      width:100%;
+    }
+    textarea{min-height:90px;resize:vertical}
+    label{font-size:12px;color:var(--muted)}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border:1px solid rgba(36,52,73,.75);
+      border-radius:14px;
+      background: rgba(15,23,34,.55);
+    }
+    .table th,.table td{
+      padding:10px;
+      border-bottom:1px solid rgba(36,52,73,.55);
+      font-size:12px;
+      vertical-align:top;
+    }
+    .table th{color:var(--muted);text-align:left;background: rgba(16,24,38,.35)}
+    .table tr:last-child td{border-bottom:none}
+    .small{font-size:11px;color:var(--muted)}
+    .right{text-align:right}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .tag{
+      display:inline-block;padding:2px 8px;border-radius:999px;
+      border:1px solid rgba(36,52,73,.75);
+      color:var(--muted);font-size:11px;
+      background: rgba(16,24,38,.35);
+    }
+    .progressbar{
+      height:10px;border-radius:999px;
+      background: rgba(36,52,73,.55);
+      overflow:hidden;border:1px solid rgba(36,52,73,.75);
+    }
+    .progressbar > div{
+      height:100%;
+      background: linear-gradient(90deg, rgba(255,122,24,.95), rgba(255,154,60,.95));
+      width:0%;
+    }
+    .stepbox{
+      display:grid;grid-template-columns: 1fr auto;gap:10px;
+      align-items:center;
+      padding:10px;border:1px solid rgba(36,52,73,.65);
+      background: rgba(15,23,34,.45);
+      border-radius:14px;
+      margin-top:10px;
+    }
+    .steps{
+      display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;
+      max-height:360px;overflow:auto;padding-right:6px;
+    }
+    .step{
+      display:flex;align-items:center;gap:10px;
+      border:1px solid rgba(36,52,73,.55);
+      background: rgba(16,24,38,.35);
+      border-radius:12px;padding:8px 10px;
+      font-size:12px;
+    }
+    .step input{width:auto}
+    .warn{color:var(--warn)}
+    .ok{color:var(--ok)}
+    .bad{color:var(--bad)}
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div>
+          Provi Daily Checklist
+          <div class="small">Track circuits • steps • daily log</div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <span class="pill" id="userPill">user: -</span>
+      <span class="pill" id="dirtyPill">dirty: no</span>
+      <a class="btn ghost" href="index.html">Back to Portal</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="layout">
+
+      <!-- LEFT: CIRCUITS -->
+      <section class="card">
+        <h2>Circuits</h2>
+        <div class="muted">เพิ่ม/แก้ไขวงจร และเลือกวงจรเพื่อทำ checklist</div>
+
+        <div class="row">
+          <button class="btn primary" id="btnAdd">+ Add circuit</button>
+          <button class="btn" id="btnExport">Mark dirty</button>
+          <button class="btn" id="btnForceSync">Force sync</button>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <input id="search" placeholder="ค้นหา SOF / CID / ชื่อ..." />
+        </div>
+
+        <div style="margin-top:12px;overflow:auto;max-height:520px;">
+          <table class="table" id="circuitTable">
+            <thead>
+              <tr>
+                <th style="width:30%;">SOF</th>
+                <th style="width:25%;">CID</th>
+                <th>ชื่อ</th>
+                <th class="right" style="width:70px;">%</th>
+              </tr>
+            </thead>
+            <tbody id="circuitTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="small" style="margin-top:10px;">
+          * ประเภท auto: CID ขึ้นต้นด้วย <span class="mono">C</span> = DIA, <span class="mono">P</span> = DPLC
+        </div>
+      </section>
+
+      <!-- RIGHT: DETAIL -->
+      <section class="card">
+        <h2>Detail</h2>
+        <div class="muted">เลือกวงจรจากฝั่งซ้าย แล้วติ๊กขั้นตอน/ใส่ Remark/บันทึก Log</div>
+
+        <div id="emptyHint" class="stepbox">
+          <div>
+            <div style="font-weight:900;">ยังไม่ได้เลือกวงจร</div>
+            <div class="small">เลือกจากตารางฝั่งซ้ายเพื่อเริ่มทำงาน</div>
+          </div>
+          <span class="tag">Ready</span>
+        </div>
+
+        <div id="detail" style="display:none;">
+          <div class="grid2" style="margin-top:12px;">
+            <div>
+              <label>SOF</label>
+              <input id="d_sof" disabled />
+            </div>
+            <div>
+              <label>CID</label>
+              <input id="d_cid" disabled />
+            </div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div>
+              <label>ชื่อ</label>
+              <input id="d_name" disabled />
+            </div>
+            <div>
+              <label>ประเภท</label>
+              <input id="d_type" disabled />
+            </div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div>
+              <label>M (ถ้ามี)</label>
+              <input id="d_m" placeholder="เช่น M1234" />
+            </div>
+            <div>
+              <label>Remark (ติดอะไร)</label>
+              <input id="d_remark" placeholder="สั้นๆ ว่าติดอะไร" />
+            </div>
+          </div>
+
+          <div class="stepbox">
+            <div>
+              <div style="font-weight:900;">Progress</div>
+              <div class="small" id="progressText">0%</div>
+              <div class="progressbar" style="margin-top:8px;"><div id="progressBar"></div></div>
+            </div>
+            <button class="btn primary" id="btnSaveDetail">Save detail</button>
+          </div>
+
+          <div style="margin-top:12px;font-weight:900;">Steps (21)</div>
+          <div class="steps" id="steps"></div>
+
+          <div style="margin-top:12px;font-weight:900;">Daily Log</div>
+          <div class="grid3" style="margin-top:10px;">
+            <div>
+              <label>Action</label>
+              <input id="log_action" placeholder="เช่น เปิด Task / จอง SID / นัดติดตั้ง" />
+            </div>
+            <div>
+              <label>SOF</label>
+              <input id="log_sof" disabled />
+            </div>
+            <div>
+              <label>CID</label>
+              <input id="log_cid" disabled />
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <label>Detail</label>
+            <textarea id="log_detail" placeholder="ทำอะไรไปบ้าง / ผลที่ได้ / ข้อมูลที่ต้องจำ"></textarea>
+          </div>
+          <div class="row">
+            <button class="btn primary" id="btnAddLog">Add log</button>
+            <div class="spacer"></div>
+            <span class="small" id="lastSaved">-</span>
+          </div>
+
+          <div style="margin-top:12px;max-height:180px;overflow:auto;border-radius:14px;border:1px solid rgba(36,52,73,.75);">
+            <table class="table">
+              <thead><tr>
+                <th style="width:110px;">date</th>
+                <th style="width:70px;">time</th>
+                <th style="width:110px;">actor</th>
+                <th style="width:140px;">action</th>
+                <th>detail</th>
+              </tr></thead>
+              <tbody id="logTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ADD/EDIT MODAL (simple prompt-less form) -->
+  <div id="modal" style="position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);padding:16px;z-index:99;">
+    <div class="card" style="width:min(720px, 100%); background: rgba(16,24,38,.92);">
+      <h2 id="modalTitle">Add circuit</h2>
+      <div class="muted">กรอก SOF/CID/ชื่อ (แก้ไขได้ภายหลัง)</div>
+
+      <div class="grid3" style="margin-top:12px;">
+        <div>
+          <label>SOF</label>
+          <input id="m_sof" placeholder="เช่น SOF12345" />
+        </div>
+        <div>
+          <label>CID</label>
+          <input id="m_cid" placeholder="Cxxxx หรือ Pxxxx" />
+        </div>
+        <div>
+          <label>ชื่อ</label>
+          <input id="m_name" placeholder="ชื่องาน/ลูกค้า" />
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:10px;">
+        <div>
+          <label>ประเภท (auto)</label>
+          <input id="m_type" disabled placeholder="DIA/DPLC" />
+        </div>
+        <div>
+          <label>M (ถ้ามี)</label>
+          <input id="m_m" placeholder="เช่น M1234 (optional)" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="m_save">Save</button>
+        <button class="btn" id="m_cancel">Cancel</button>
+        <div class="spacer"></div>
+        <button class="btn danger" id="m_delete" style="display:none;">Delete</button>
+      </div>
+
+      <pre id="m_debug" style="display:none;">-</pre>
+    </div>
+  </div>
+
+<script>
+/** =========================
+ * STORAGE MODEL (local)
+ * circuits: [{id, sof, cid, name, type, m, remark, steps[21], createdAt, updatedAt}]
+ * logs: [{id, date, time, actor, sof, cid, type, action, detail, remarkSnapshot, mSnapshot}]
+ * ========================= **/
+const STEPS = [
+  "1. จอง SID",
+  "2. สร้าง SID บน CMDB",
+  "3. สร้าง Folder ไดฟ์กลาง",
+  "4. เปิด Task ไปแผนกที่เกี่ยวข้อง",
+  "5. ส่งเมลคิวงาน/สรุป requirement ให้ครบ",
+  "6. เช็ค stock เบิกของ",
+  "7. เตรียม config ตามวงจร",
+  "8. คอนฟิกอุปกรณ์ให้พร้อม",
+  "9. ทำ 147",
+  "10. คอนฟิก Node",
+  "11. Shape Bandwidth",
+  "12. Add Zabbix + SMS Alert (ถ้า SOF ระบุ)",
+  "13. Add Graph",
+  "14. เช็คแผนวันติดตั้ง + นัดผู้รับเหมารับอุปกรณ์",
+  "15. ติดตั้งส่งเมลให้ลูกค้า",
+  "16. ปิด SR",
+  "17. Update Inventory",
+  "18. Update CMDB",
+  "19. Update CMDB (final check)",
+  "20. ทำ F-108",
+  "21. ปิด CR"
+];
+
+const KEY = "provi_checklist_state_v1";
+const $ = (id)=>document.getElementById(id);
+
+function nowParts(){
+  const d = new Date();
+  return { date: d.toISOString().slice(0,10), time: d.toTimeString().slice(0,5) };
+}
+function uuid(){ return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16); }
+
+function getUser(){
+  return (window.ProviPortal && window.ProviPortal.getUser && window.ProviPortal.getUser()) || "unknown";
+}
+
+function loadState(){
+  try { return JSON.parse(localStorage.getItem(KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveState(state){
+  localStorage.setItem(KEY, JSON.stringify(state));
+  markDirty();
+}
+function ensureState(){
+  const s = loadState();
+  if(!s.circuits) s.circuits = [];
+  if(!s.logs) s.logs = [];
+  return s;
+}
+
+function markDirty(){
+  if(window.ProviPortal && window.ProviPortal.markDirty) window.ProviPortal.markDirty();
+  $("dirtyPill").textContent = "dirty: YES";
+  $("dirtyPill").style.color = "var(--warn)";
+}
+function setDirtyNo(){
+  $("dirtyPill").textContent = "dirty: no";
+  $("dirtyPill").style.color = "var(--muted)";
+}
+
+function autoTypeByCid(cid){
+  const c = (cid||"").trim().toUpperCase();
+  if(c.startsWith("C")) return "DIA";
+  if(c.startsWith("P")) return "DPLC";
+  return "";
+}
+
+function calcProgress(c){
+  const done = (c.steps||[]).filter(Boolean).length;
+  return Math.round((done / STEPS.length) * 100);
+}
+
+let selectedId = null;
+
+function renderCircuitTable(){
+  const s = ensureState();
+  const q = ($("search").value || "").trim().toLowerCase();
+  const rows = s.circuits
+    .filter(c => !q || [c.sof,c.cid,c.name].some(v => (v||"").toLowerCase().includes(q)))
+    .sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+
+  const tbody = $("circuitTbody");
+  tbody.innerHTML = "";
+
+  for(const c of rows){
+    const tr = document.createElement("tr");
+    tr.style.cursor = "pointer";
+    if(c.id === selectedId) tr.style.background = "rgba(255,122,24,.08)";
+    tr.innerHTML = `
+      <td class="mono">${escapeHtml(c.sof||"")}</td>
+      <td class="mono">${escapeHtml(c.cid||"")}</td>
+      <td>${escapeHtml(c.name||"")}</td>
+      <td class="right"><span class="tag">${calcProgress(c)}%</span></td>
+    `;
+    tr.onclick = ()=>selectCircuit(c.id);
+    tbody.appendChild(tr);
+  }
+}
+
+function selectCircuit(id){
+  const s = ensureState();
+  const c = s.circuits.find(x=>x.id===id);
+  if(!c) return;
+  selectedId = id;
+
+  $("emptyHint").style.display = "none";
+  $("detail").style.display = "block";
+
+  $("d_sof").value = c.sof || "";
+  $("d_cid").value = c.cid || "";
+  $("d_name").value = c.name || "";
+  $("d_type").value = c.type || "";
+  $("d_m").value = c.m || "";
+  $("d_remark").value = c.remark || "";
+
+  $("log_sof").value = c.sof || "";
+  $("log_cid").value = c.cid || "";
+
+  renderSteps(c);
+  renderProgress(c);
+  renderLogsForSelected();
+  renderCircuitTable();
+}
+
+function renderSteps(c){
+  const box = $("steps");
+  box.innerHTML = "";
+  const steps = c.steps || Array(STEPS.length).fill(false);
+
+  STEPS.forEach((label, idx) => {
+    const row = document.createElement("label");
+    row.className = "step";
+    row.innerHTML = `<input type="checkbox" ${steps[idx] ? "checked" : ""} /> <span>${escapeHtml(label)}</span>`;
+    row.querySelector("input").onchange = (e)=>{
+      const s = ensureState();
+      const cc = s.circuits.find(x=>x.id===selectedId);
+      if(!cc) return;
+      if(!cc.steps) cc.steps = Array(STEPS.length).fill(false);
+      cc.steps[idx] = e.target.checked;
+      cc.updatedAt = Date.now();
+      saveState(s);
+      renderProgress(cc);
+      renderCircuitTable();
+      $("lastSaved").textContent = `Saved steps: ${new Date().toLocaleString()}`;
+    };
+    box.appendChild(row);
+  });
+}
+
+function renderProgress(c){
+  const pct = calcProgress(c);
+  $("progressText").textContent = `${pct}% (${(c.steps||[]).filter(Boolean).length}/${STEPS.length})`;
+  $("progressBar").style.width = pct + "%";
+}
+
+function renderLogsForSelected(){
+  const s = ensureState();
+  const c = s.circuits.find(x=>x.id===selectedId);
+  if(!c) return;
+
+  const rows = s.logs
+    .filter(l => l.sof === c.sof && l.cid === c.cid)
+    .sort((a,b)=> (b.ts||0) - (a.ts||0))
+    .slice(0, 50);
+
+  const tbody = $("logTbody");
+  tbody.innerHTML = "";
+  for(const l of rows){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="mono">${escapeHtml(l.date||"")}</td>
+      <td class="mono">${escapeHtml(l.time||"")}</td>
+      <td>${escapeHtml(l.actor||"")}</td>
+      <td>${escapeHtml(l.action||"")}</td>
+      <td>${escapeHtml(l.detail||"")}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function openModal(mode, circuit){
+  $("modal").style.display = "grid";
+  $("m_debug").style.display = "none";
+
+  if(mode === "add"){
+    $("modalTitle").textContent = "Add circuit";
+    $("m_delete").style.display = "none";
+    $("m_sof").value = "";
+    $("m_cid").value = "";
+    $("m_name").value = "";
+    $("m_m").value = "";
+    $("m_type").value = "";
+    $("m_save").onclick = saveModalAdd;
+  } else {
+    $("modalTitle").textContent = "Edit circuit";
+    $("m_delete").style.display = "inline-block";
+    $("m_sof").value = circuit.sof || "";
+    $("m_cid").value = circuit.cid || "";
+    $("m_name").value = circuit.name || "";
+    $("m_m").value = circuit.m || "";
+    $("m_type").value = circuit.type || "";
+    $("m_save").onclick = ()=>saveModalEdit(circuit.id);
+    $("m_delete").onclick = ()=>deleteCircuit(circuit.id);
+  }
+}
+
+function closeModal(){ $("modal").style.display = "none"; }
+
+function saveModalAdd(){
+  const sof = $("m_sof").value.trim();
+  const cid = $("m_cid").value.trim();
+  const name = $("m_name").value.trim();
+  const m = $("m_m").value.trim();
+
+  if(!sof || !cid || !name){ alert("กรอก SOF / CID / ชื่อ ให้ครบ"); return; }
+
+  const type = autoTypeByCid(cid);
+  const s = ensureState();
+
+  const c = {
+    id: uuid(),
+    sof, cid, name,
+    type,
+    m,
+    remark: "",
+    steps: Array(STEPS.length).fill(false),
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  s.circuits.push(c);
+  saveState(s);
+  closeModal();
+  renderCircuitTable();
+  selectCircuit(c.id);
+}
+
+function saveModalEdit(id){
+  const sof = $("m_sof").value.trim();
+  const cid = $("m_cid").value.trim();
+  const name = $("m_name").value.trim();
+  const m = $("m_m").value.trim();
+  if(!sof || !cid || !name){ alert("กรอก SOF / CID / ชื่อ ให้ครบ"); return; }
+
+  const s = ensureState();
+  const c = s.circuits.find(x=>x.id===id);
+  if(!c) return;
+
+  c.sof = sof;
+  c.cid = cid;
+  c.name = name;
+  c.type = autoTypeByCid(cid);
+  c.m = m;
+  c.updatedAt = Date.now();
+
+  saveState(s);
+  closeModal();
+  renderCircuitTable();
+  // refresh selected
+  if(selectedId === id) selectCircuit(id);
+}
+
+function deleteCircuit(id){
+  if(!confirm("ลบวงจรนี้?")) return;
+  const s = ensureState();
+  s.circuits = s.circuits.filter(x=>x.id!==id);
+  saveState(s);
+  closeModal();
+  if(selectedId === id){
+    selectedId = null;
+    $("detail").style.display = "none";
+    $("emptyHint").style.display = "grid";
+  }
+  renderCircuitTable();
+}
+
+function saveDetail(){
+  const s = ensureState();
+  const c = s.circuits.find(x=>x.id===selectedId);
+  if(!c) return;
+  c.m = $("d_m").value.trim();
+  c.remark = $("d_remark").value.trim();
+  c.updatedAt = Date.now();
+  saveState(s);
+  $("lastSaved").textContent = `Saved detail: ${new Date().toLocaleString()}`;
+  renderCircuitTable();
+}
+
+function addLog(){
+  const s = ensureState();
+  const c = s.circuits.find(x=>x.id===selectedId);
+  if(!c) return;
+
+  const action = $("log_action").value.trim();
+  const detail = $("log_detail").value.trim();
+  if(!action){ alert("ใส่ Action ก่อน"); return; }
+
+  const actor = getUser();
+  const { date, time } = nowParts();
+
+  s.logs.push({
+    id: uuid(),
+    ts: Date.now(),
+    date, time,
+    actor,
+    sof: c.sof,
+    cid: c.cid,
+    type: c.type,
+    action,
+    detail,
+    remarkSnapshot: c.remark || "",
+    mSnapshot: c.m || ""
+  });
+
+  // auto update "updatedAt"
+  c.updatedAt = Date.now();
+
+  saveState(s);
+  $("log_action").value = "";
+  $("log_detail").value = "";
+  $("lastSaved").textContent = `Added log: ${new Date().toLocaleString()}`;
+  renderLogsForSelected();
+  renderCircuitTable();
+}
+
+function escapeHtml(s){
+  return String(s||"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/** ===== Portal integration (export state) =====
+ * index.html จะเรียก getPortalState() เพื่อส่งขึ้น Drive
+ */
+function getPortalState(){
+  const s = ensureState();
+  const actor = getUser();
+
+  // circuits snapshot rows for sheet
+  const circuitsRows = s.circuits.map(c => {
+    const pct = calcProgress(c);
+    const last = c.updatedAt ? new Date(c.updatedAt) : null;
+    const lastUpdate = last ? formatDateTime(last) : "";
+    const nextStep = (() => {
+      const idx = (c.steps||[]).findIndex(v => !v);
+      return idx >= 0 ? STEPS[idx] : "DONE";
+    })();
+    return [c.name||"", c.sof||"", c.cid||"", c.type||"", pct, lastUpdate, "", c.remark||"", nextStep];
+  });
+
+  // logs rows for sheet
+  const logsRows = s.logs
+    .sort((a,b)=> (a.ts||0) - (b.ts||0))
+    .map(l => [l.date,l.time,l.actor,l.sof,l.cid,l.type,l.action,l.detail,l.remarkSnapshot,l.mSnapshot]);
+
+  return {
+    actor,
+    circuits: circuitsRows,
+    logs: logsRows,
+    events: [],
+    _source: "checklist"
+  };
+}
+function formatDateTime(d){
+  const pad = (n)=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// expose to portal
+window.ProviChecklist = { getPortalState };
+
+/** =========================
+ * INIT
+ * ========================= **/
+function init(){
+  // show user pill
+  const u = getUser();
+  $("userPill").textContent = "user: " + (u || "-");
+
+  // dirty pill initial
+  $("dirtyPill").textContent = "dirty: (use portal)";
+  $("dirtyPill").style.color = "var(--muted)";
+
+  // search
+  $("search").oninput = renderCircuitTable;
+
+  // add
+  $("btnAdd").onclick = ()=>openModal("add");
+
+  // modal auto type
+  $("m_cid").oninput = ()=> $("m_type").value = autoTypeByCid($("m_cid").value);
+
+  $("m_cancel").onclick = closeModal;
+
+  // edit on double click row (simple: edit selected)
+  $("circuitTable").ondblclick = ()=>{
+    const s = ensureState();
+    const c = s.circuits.find(x=>x.id===selectedId);
+    if(c) openModal("edit", c);
+  };
+
+  // save detail
+  $("btnSaveDetail").onclick = saveDetail;
+
+  // add log
+  $("btnAddLog").onclick = addLog;
+
+  // mark dirty
+  $("btnExport").onclick = ()=>{
+    markDirty();
+    $("lastSaved").textContent = "Marked dirty: " + new Date().toLocaleString();
+  };
+
+  // force sync via portal
+  $("btnForceSync").onclick = async ()=>{
+    if(window.ProviPortal && window.ProviPortal.forceSync){
+      // ก่อน sync ให้ mark dirty แล้วให้ index ไปอ่าน state จริง (เฟสถัดไป)
+      markDirty();
+      try{
+        await window.ProviPortal.forceSync();
+        setDirtyNo();
+        $("lastSaved").textContent = "Force sync sent. Check Drive.";
+      }catch(e){
+        alert("Force sync error: " + (e.message||e));
+      }
+    }else{
+      alert("กลับไปหน้า index.html แล้ว Login ก่อน");
+    }
+  };
+
+  renderCircuitTable();
+}
+init();
+</script>
+</body>
+</html>
