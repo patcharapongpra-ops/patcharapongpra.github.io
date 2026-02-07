@@ -284,14 +284,11 @@
   <div class="overlay" id="overlay">
     <div class="login">
       <h2>Login</h2>
-      <div class="sub">เลือกผู้ใช้และใส่รหัสผ่าน เพื่อเข้าใช้งาน Provisioning Portal</div>
+      <div class="sub">กรอกชื่อผู้ใช้และใส่รหัสผ่าน เพื่อเข้าใช้งาน Provisioning Portal</div>
 
       <div class="row">
-        <select id="userPick">
-          <option value="">เลือกผู้ใช้…</option>
-          <option value="Patcharapong">Patcharapong</option>
-          <option value="Nawaphon">Nawaphon</option>
-        </select>
+        <input id="userPick" placeholder="Username" />
+
         <input id="pass" type="password" placeholder="Password" />
         <button class="btn primary" id="btnLogin">Sign in</button>
       </div>
@@ -365,10 +362,10 @@
     }
 
     async function doLogin(){
-      const user = $("userPick").value.trim();
+      const user = ($("userPick").value || "").trim();
       const pass = $("pass").value.trim();
       if(!user || !pass){
-        logLogin("เลือก user + ใส่รหัสให้ครบ");
+        logLogin("กรอก username + password ให้ครบ"");
         return;
       }
 
@@ -400,24 +397,28 @@
       }
     }
 
-    function init(){
-      $("btnLogout").onclick = () => { clearSession(); refreshUI(); };
-      $("btnLogin").onclick = doLogin;
+function init(){
+  $("btnLogout").onclick = () => { clearSession(); refreshUI(); };
+  $("btnLogin").onclick = doLogin;
 
-      // Enter key submit
-      $("pass").addEventListener("keydown", (e)=>{
-        if(e.key === "Enter") doLogin();
-      });
+  // ✅ Enter key submit (user + pass)
+  $("userPick").addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") doLogin();
+  });
+  $("pass").addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") doLogin();
+  });
 
-      $("openDrive").onclick = (e)=>{
-        e.preventDefault();
-        if(requireLoginOrWarn()) openDriveFolder();
-      };
+  $("openDrive").onclick = (e)=>{
+    e.preventDefault();
+    if(requireLoginOrWarn()) openDriveFolder();
+  };
 
-      refreshUI();
-      logLogin("Ready. Please login.");
-    }
-    init();
+  refreshUI();
+  logLogin("Ready. Please login.");
+}
+init();
+
   </script>
 </body>
 </html>
