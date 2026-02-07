@@ -16,6 +16,7 @@
       --accent2:#ff9a3c;
       --ok:#37d67a;
       --warn:#ffd089;
+      --bad:#ff5c7a;
     }
     *{box-sizing:border-box}
     body{
@@ -65,6 +66,8 @@
       color:var(--muted);
       font-size:12px;
     }
+    .pill.ok{border-color: rgba(55,214,122,.45); color:#d4ffe6;}
+    .pill.bad{border-color: rgba(255,92,122,.45); color:#ffd1dc;}
     .btn{
       border:1px solid rgba(36,52,73,.9);
       background: rgba(16,24,38,.75);
@@ -302,6 +305,8 @@
   </div>
 
   <script>
+    /** ===== CONFIG ===== */
+    const API_URL = "https://script.google.com/macros/s/PUT_YOUR_SCRIPT_ID_HERE/exec"; // <-- แก้เป็นของจริง
     const ROOT_DRIVE_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk";
     const SESSION_KEY = "provi_session"; // {user,pass,ymLastSync}
 
@@ -339,18 +344,75 @@
       window.open(`https://drive.google.com/drive/folders/${ROOT_DRIVE_FOLDER_ID}`, "_blank");
     }
 
-    function init(){
-      $("btnLogout").onclick = () => { clearSession(); refreshUI(); };
-      $("btnLogin").onclick = () => {
-        const user = $("userPick").value;
-        const pass = $("pass").value;
-        if(!user || !pass){ logLogin("เลือก user + ใส่รหัสให้ครบ"); return; }
+    /** ===== JSONP helper (avoid CORS) ===== */
+    function jsonp(url){
+      return new Promise((resolve, reject)=>{
+        const cb = "cb_" + Math.random().toString(16).slice(2);
+        const s = document.createElement("script");
+        const timer = setTimeout(()=>{ cleanup(); reject(new Error("JSONP_TIMEOUT")); }, 15000);
+
+        function cleanup(){
+          clearTimeout(timer);
+          try{ delete window[cb]; }catch(_){}
+          s.remove();
+        }
+
+        window[cb] = (data)=>{ cleanup(); resolve(data); };
+        s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+        s.onerror = ()=>{ cleanup(); reject(new Error("JSONP_LOAD_FAIL")); };
+        document.body.appendChild(s);
+      });
+    }
+
+    async function doLogin(){
+      const user = $("userPick").value.trim();
+      const pass = $("pass").value.trim();
+      if(!user || !pass){
+        logLogin("เลือก user + ใส่รหัสให้ครบ");
+        return;
+      }
+
+      $("btnLogin").disabled = true;
+      logLogin("Checking credentials...");
+
+      try{
+        const payload = encodeURIComponent(JSON.stringify({ user, pass }));
+        const url = `${API_URL}?mode=login&payload=${payload}`;
+        const res = await jsonp(url);
+
+        if(!res || !res.ok){
+          const err = (res && res.error) ? res.error : "UNKNOWN";
+          logLogin({ ok:false, error: err });
+          alert("Login ไม่ผ่าน: " + err);
+          return;
+        }
+
         setSession({ user, pass, ymLastSync: "" });
         $("pass").value = "";
         logLogin({ ok:true, user });
         refreshUI();
+
+      }catch(e){
+        logLogin({ ok:false, error: e.message || String(e) });
+        alert("Login error: " + (e.message || e));
+      }finally{
+        $("btnLogin").disabled = false;
+      }
+    }
+
+    function init(){
+      $("btnLogout").onclick = () => { clearSession(); refreshUI(); };
+      $("btnLogin").onclick = doLogin;
+
+      // Enter key submit
+      $("pass").addEventListener("keydown", (e)=>{
+        if(e.key === "Enter") doLogin();
+      });
+
+      $("openDrive").onclick = (e)=>{
+        e.preventDefault();
+        if(requireLoginOrWarn()) openDriveFolder();
       };
-      $("openDrive").onclick = (e)=>{ e.preventDefault(); if(requireLoginOrWarn()) openDriveFolder(); };
 
       refreshUI();
       logLogin("Ready. Please login.");
