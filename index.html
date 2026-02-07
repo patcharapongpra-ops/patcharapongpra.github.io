@@ -12,7 +12,7 @@
       --line:#243449;
       --text:#eaf2ff;
       --muted:#8fa4be;
-      --accent:#ff7a18;   /* ORANGE */
+      --accent:#ff7a18;
       --accent2:#ff9a3c;
       --ok:#37d67a;
       --warn:#ffd089;
@@ -40,24 +40,17 @@
       display:flex; align-items:center; gap:12px;
       padding:12px 16px;
     }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-      font-weight:900; letter-spacing:.2px;
-    }
+    .brand{display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.2px;}
     .logo{
       width:34px; height:34px; border-radius:12px;
       background: linear-gradient(180deg, var(--accent), #d85f0f);
       box-shadow: 0 10px 30px rgba(255,122,24,.18);
       display:grid; place-items:center;
-      font-weight:1000;
-      color:#1a0d05;
+      font-weight:1000; color:#1a0d05;
     }
     .brand small{display:block; font-weight:700; color:var(--muted); margin-top:2px; letter-spacing:0}
     .spacer{flex:1}
-    .userbox{
-      display:flex; align-items:center; gap:10px;
-      color:var(--muted); font-size:13px;
-    }
+    .userbox{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13px;}
     .pill{
       border:1px solid rgba(36,52,73,.9);
       background: rgba(16,24,38,.75);
@@ -86,12 +79,7 @@
     .btn:disabled{opacity:.55;cursor:not-allowed}
 
     .container{max-width:1200px; margin:0 auto; padding:16px;}
-    .layout{
-      display:grid;
-      grid-template-columns: 260px 1fr;
-      gap:14px;
-      align-items:start;
-    }
+    .layout{display:grid; grid-template-columns: 260px 1fr; gap:14px; align-items:start;}
 
     .sidebar{
       border:1px solid rgba(36,52,73,.75);
@@ -106,9 +94,7 @@
       text-transform:uppercase;
       margin:2px 0 10px;
     }
-    .nav{
-      display:flex; flex-direction:column; gap:8px;
-    }
+    .nav{display:flex; flex-direction:column; gap:8px;}
     .nav a{
       text-decoration:none;
       color:var(--text);
@@ -143,18 +129,8 @@
     }
     .hero h2{margin:0; font-size:18px;}
     .hero p{margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.5}
-    .grid{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap:12px;
-    }
-    .card{
-      border:1px solid rgba(36,52,73,.75);
-      background: rgba(15,23,34,.55);
-      border-radius:16px;
-      padding:14px;
-    }
+    .grid{margin-top:14px; display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px;}
+    .card{border:1px solid rgba(36,52,73,.75); background: rgba(15,23,34,.55); border-radius:16px; padding:14px;}
     .card h3{margin:0; font-size:14px;}
     .card p{margin:6px 0 0; font-size:12px; color:var(--muted); line-height:1.5}
     .hidden{display:none !important;}
@@ -178,7 +154,7 @@
     .login h2{margin:0; font-size:18px;}
     .login .sub{margin-top:6px; font-size:13px; color:var(--muted); line-height:1.5}
     .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center}
-    select,input{
+    input{
       background: rgba(14,21,32,.95);
       border:1px solid rgba(36,52,73,.9);
       color:var(--text);
@@ -254,9 +230,7 @@
       <main class="main">
         <div class="hero">
           <h2>Announcement / Dashboard</h2>
-          <p>
-            พื้นที่ตรงกลางไว้ประกาศงาน / แจ้งเตือน / หรือสรุปสถานะภาพรวมในอนาคต
-          </p>
+          <p>พื้นที่ตรงกลางไว้ประกาศงาน / แจ้งเตือน / หรือสรุปสถานะภาพรวมในอนาคต</p>
           <div style="margin-top:10px;">
             <span class="pill" id="userHint">Login เพื่อเริ่มใช้งาน</span>
           </div>
@@ -284,12 +258,11 @@
   <div class="overlay" id="overlay">
     <div class="login">
       <h2>Login</h2>
-      <div class="sub">กรอกชื่อผู้ใช้และใส่รหัสผ่าน เพื่อเข้าใช้งาน Provisioning Portal</div>
+      <div class="sub">กรอกชื่อผู้ใช้และรหัสผ่าน เพื่อเข้าใช้งาน Provisioning Portal</div>
 
       <div class="row">
-        <input id="userPick" placeholder="Username" />
-
-        <input id="pass" type="password" placeholder="Password" />
+        <input id="userPick" placeholder="Username" autocomplete="username" />
+        <input id="pass" type="password" placeholder="Password" autocomplete="current-password" />
         <button class="btn primary" id="btnLogin">Sign in</button>
       </div>
 
@@ -303,7 +276,7 @@
 
   <script>
     /** ===== CONFIG ===== */
-    const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec"; // <-- แก้เป็นของจริง
+    const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec";
     const ROOT_DRIVE_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk";
     const SESSION_KEY = "provi_session"; // {user,pass,ymLastSync}
 
@@ -323,7 +296,11 @@
       const s = getSession();
       const loggedIn = !!(s.user && s.pass);
 
-      $("who").textContent = loggedIn ? `Logged in: ${s.user}` : "Not logged in";
+      const who = $("who");
+      who.textContent = loggedIn ? `Logged in: ${s.user}` : "Not logged in";
+      who.classList.toggle("ok", loggedIn);
+      who.classList.toggle("bad", !loggedIn);
+
       $("btnLogout").classList.toggle("hidden", !loggedIn);
       $("overlay").classList.toggle("hidden", loggedIn);
       $("userHint").textContent = loggedIn ? `Welcome, ${s.user}` : "Login เพื่อเริ่มใช้งาน";
@@ -363,9 +340,10 @@
 
     async function doLogin(){
       const user = ($("userPick").value || "").trim();
-      const pass = $("pass").value.trim();
+      const pass = ($("pass").value || "").trim();
+
       if(!user || !pass){
-        logLogin("กรอก username + password ให้ครบ"");
+        logLogin("กรอก username + password ให้ครบ");
         return;
       }
 
@@ -379,7 +357,7 @@
 
         if(!res || !res.ok){
           const err = (res && res.error) ? res.error : "UNKNOWN";
-          logLogin({ ok:false, error: err });
+          logLogin({ ok:false, error: err, res });
           alert("Login ไม่ผ่าน: " + err);
           return;
         }
@@ -397,28 +375,24 @@
       }
     }
 
-function init(){
-  $("btnLogout").onclick = () => { clearSession(); refreshUI(); };
-  $("btnLogin").onclick = doLogin;
+    function init(){
+      $("btnLogout").onclick = () => { clearSession(); refreshUI(); };
 
-  // ✅ Enter key submit (user + pass)
-  $("userPick").addEventListener("keydown", (e)=>{
-    if(e.key === "Enter") doLogin();
-  });
-  $("pass").addEventListener("keydown", (e)=>{
-    if(e.key === "Enter") doLogin();
-  });
+      $("btnLogin").onclick = doLogin;
 
-  $("openDrive").onclick = (e)=>{
-    e.preventDefault();
-    if(requireLoginOrWarn()) openDriveFolder();
-  };
+      // Enter key submit (user + pass)
+      $("userPick").addEventListener("keydown", (e)=>{ if(e.key === "Enter") doLogin(); });
+      $("pass").addEventListener("keydown", (e)=>{ if(e.key === "Enter") doLogin(); });
 
-  refreshUI();
-  logLogin("Ready. Please login.");
-}
-init();
+      $("openDrive").onclick = (e)=>{
+        e.preventDefault();
+        if(requireLoginOrWarn()) openDriveFolder();
+      };
 
+      refreshUI();
+      logLogin("Ready. Please login.");
+    }
+    init();
   </script>
 </body>
 </html>
