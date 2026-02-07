@@ -529,8 +529,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!silent) toast("บันทึกแล้ว");
   }
 
-  // ✅ เพิ่ม doneCircuits เพื่อเก็บงานที่ archive ออกจากเว็บแล้ว
-  const state = load() || { selectedId:null, circuits:{}, doneCircuits:{}, events:[], logs:{} };
+  // state:
+  // - circuits: งานค้างเท่านั้น (ถ้าปิดงาน จะย้ายไป doneCircuits)
+  // - doneCircuits: งานที่เสร็จแล้ว (optional: เก็บไว้ในเครื่องเพื่อ reference)
+  // - logs: จะถูกล้างหลัง sync สำเร็จ
+  // - events: เก็บเฉพาะเดือนปัจจุบัน
+  // - monthlySummary: summary เดือนปัจจุบัน
+  const state = load() || { selectedId:null, circuits:{}, doneCircuits:{}, events:[], logs:{}, monthlySummary:null };
 
   /** ===== helpers ===== */
   function toast(msg){
@@ -564,23 +569,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function touchUpdate(c){ c.lastUpdateDate=todayStr(); c.lastUpdateTime=nowTime(); c.updatedAt=Date.now(); }
   function lastUpdateStamp(c){ return `${c.lastUpdateDate||"-"} ${c.lastUpdateTime||"-"}`; }
 
-  function addLogCircuit(c, action, detail){
+  function addLogCircuit(c, action, detail, extra={}){
     const d=todayStr(), t=nowTime();
     ensureLogDate(d);
     state.logs[d].push({
-      time:t, circuitId:c.id, sof:c.sof, cid:c.cid, type:c.type,
+      time:t,
+      circuitId:c.id,
+      sof:c.sof, cid:c.cid, type:c.type,
       action, detail,
       remarkSnapshot:(c.remark||"").trim(),
       mSnapshot:(c.m||"").trim(),
-      actor
+      actor,
+      ...extra
     });
   }
-  function addLogSystem(action, detail){
+  function addLogSystem(action, detail, extra={}){
     const d=todayStr(), t=nowTime();
     ensureLogDate(d);
     state.logs[d].push({
       time:t, circuitId:"", sof:"", cid:"", type:"",
-      action, detail, remarkSnapshot:"", mSnapshot:"", actor
+      action, detail, remarkSnapshot:"", mSnapshot:"", actor,
+      ...extra
     });
   }
 
@@ -593,27 +602,11 @@ document.addEventListener("DOMContentLoaded", () => {
     for(let i=0;i<STEPS.length;i++) if(!isStepDone(c,i)) return i;
     return null;
   }
-  function getSelected(){ return state.selectedId ? state.circuits[state.selectedId] : null; }
-
-  /** ✅ งานเสร็จแล้ว “ย้ายออกจากเว็บ” */
-  function archiveIfDone(c){
-    const doneAll = STEPS.every((_, i) => isStepDone(c, i));
-    if(!doneAll) return false;
-
-    if(!state.doneCircuits) state.doneCircuits = {};
-    state.doneCircuits[c.id] = {
-      ...c,
-      doneAt: `${todayStr()} ${nowTime()}`,
-      archivedAt: Date.now()
-    };
-
-    delete state.circuits[c.id];
-
-    if(state.selectedId === c.id) state.selectedId = null;
-
-    addLogSystem("CIRCUIT_ARCHIVE", `DONE → archived: ${c.cid} ${c.name}`);
-    return true;
+  function isCompleted(c){
+    // เสร็จเมื่อ step 21 ติ๊ก หรือเปอร์เซ็นต์ 100
+    return isStepDone(c, STEP_21_IDX) || percentOf(c) === 100;
   }
+  function getSelected(){ return state.selectedId ? state.circuits[state.selectedId] : null; }
 
   /** ===== dirty flag (per user) ===== */
   function isDirty(){ return localStorage.getItem(DIRTY_KEY)==="1"; }
@@ -635,10 +628,73 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function isInstallBlocked(dateStr){ return hasAllDay(dateStr); }
 
-  /** ===== Sync to Apps Script ===== */
-  function ymNow(){ return new Date().toISOString().slice(0,7); }
+  /** ===== YM helpers / month clean ===== */
+  function ymNow(){ return new Date().toISOString().slice(0,7); } // YYYY-MM
+  function isInYm(dateStr, ym){ return (dateStr || "").slice(0,7) === ym; }
 
+  function computeMonthlySummary(ym){
+    const open = Object.values(state.circuits || {});
+    const doneArr = Object.values(state.doneCircuits || {});
+    const createdThisMonth = open.filter(c => isInYm(c.createdAt, ym)).length;
+    const doneThisMonth = doneArr.filter(c => isInYm((c.doneAt||""), ym)).length;
+
+    return {
+      ym,
+      openCount: open.length,
+      createdCount: createdThisMonth,
+      doneCount: doneThisMonth,
+      lastSavedAt: Date.now()
+    };
+  }
+
+  // หลัง sync สำเร็จ: ล้าง logs เก่า + เก็บ events เฉพาะเดือนปัจจุบัน + อัปเดต summary
+  function cleanupAfterSuccessfulSync(ym){
+    state.logs = {};
+    state.events = (state.events || []).filter(e => isInYm(e.date, ym));
+    state.monthlySummary = computeMonthlySummary(ym);
+    if(state.selectedId && !state.circuits[state.selectedId]) state.selectedId = null;
+
+    localStorage.setItem(KEY, JSON.stringify(state));
+  }
+
+  // ขึ้นเดือนใหม่: auto-clean (reset events/summary/logs) แต่ "ไม่ยุ่ง circuits งานค้าง"
+  function autoCleanOnNewMonth(){
+    const currentYm = ymNow();
+    const lastYm = (sess.ymLastSync || state.lastYm || "").trim();
+
+    if(lastYm && lastYm !== currentYm){
+      // เปลี่ยนเดือนแล้ว
+      state.logs = {}; // ล้าง logs ของเดือนเก่า
+      state.events = []; // reset events ใหม่ (เดือนใหม่)
+      state.monthlySummary = { ym: currentYm, openCount: Object.keys(state.circuits||{}).length, createdCount: 0, doneCount: 0, lastSavedAt: Date.now() };
+
+      // เคลียร์ dirty ด้วย เพื่อไม่บังคับ sync ทันที (ถ้าต้องการให้ sync ก็ทำให้ dirty=true ได้)
+      setDirty(false);
+
+      // บันทึก state
+      state.lastYm = currentYm;
+      sess.ymLastSync = currentYm;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+      localStorage.setItem(KEY, JSON.stringify(state));
+
+      toast(`ขึ้นเดือนใหม่แล้ว (${currentYm}) → ล้าง logs/events เดิมในเครื่องแล้ว`);
+    }
+
+    // ถ้ายังไม่เคย set lastYm เลย ให้ตั้งค่าเริ่มต้น
+    if(!lastYm){
+      state.lastYm = currentYm;
+      sess.ymLastSync = sess.ymLastSync || currentYm;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
+  }
+
+  /** ===== Sync to Apps Script =====
+      - ส่งแบบ no-cors: response อ่านไม่ได้ (ปกติ)
+      - เราจะโชว์ว่า "Sent" แล้วไปเช็คใน Drive
+  */
   function buildPayload(){
+    // circuits (งานค้างในเว็บ)
     const circuits = Object.values(state.circuits||{})
       .slice()
       .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))
@@ -653,13 +709,22 @@ document.addEventListener("DOMContentLoaded", () => {
         ];
       });
 
+    // logs (รายวัน) — จะถูกล้างหลัง sync สำเร็จ
     const logs = [];
     Object.keys(state.logs||{}).sort().forEach(d=>{
       (state.logs[d]||[]).forEach(l=>{
-        logs.push([d, l.time, l.actor||"", l.sof||"", l.cid||"", l.type||"", l.action||"", l.detail||"", l.remarkSnapshot||"", l.mSnapshot||""]);
+        logs.push([
+          d, l.time, l.actor||"",
+          l.sof||"", l.cid||"", l.type||"",
+          l.action||"", l.detail||"",
+          l.remarkSnapshot||"", l.mSnapshot||"",
+          // เพิ่ม stepNo/stepName ถ้ามี
+          (typeof l.stepNo==="number" ? l.stepNo : ""), (l.stepName||"")
+        ]);
       });
     });
 
+    // events (เดือนนี้)
     const events = (state.events||[])
       .slice()
       .sort((a,b)=>(a.date||"").localeCompare(b.date||"") || (a.slot||"").localeCompare(b.slot||""))
@@ -690,9 +755,17 @@ document.addEventListener("DOMContentLoaded", () => {
         headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
         body: new URLSearchParams({ payload: JSON.stringify(packet) })
       });
+
+      // ✅ หลัง Sync สำเร็จ: ล้าง logs เก่าใน localStorage เหลือเฉพาะงานค้าง + สรุปเดือนนี้
+      cleanupAfterSuccessfulSync(ym);
+
+      // บันทึกว่า sync ล่าสุดอยู่เดือนนี้ (ไว้ตรวจขึ้นเดือนใหม่)
+      sess.ymLastSync = ym;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+
       setDirty(false);
-      $("syncStatus").textContent = `Sent ✅ (${ym}) — check Drive folder`;
-      toast("ส่งข้อมูลขึ้น Drive แล้ว");
+      $("syncStatus").textContent = `Sent ✅ (${ym}) — cleaned local logs`;
+      toast("ส่งข้อมูลขึ้น Drive แล้ว + ล้าง log เก่าในเครื่องแล้ว");
     }catch(e){
       $("syncStatus").textContent = "Sync failed: " + (e.message || e);
       toast("Sync ไม่สำเร็จ");
@@ -702,6 +775,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function startAutoSync(){
     setInterval(async ()=>{
       try{
+        // เช็คขึ้นเดือนใหม่แบบอัตโนมัติ
+        autoCleanOnNewMonth();
+
         if(!isDirty()) return;
         await sendToScript({force:false});
       }catch(_){}
@@ -958,7 +1034,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /** ===== render ===== */
-  function renderAll(){
+  function renderAll(silent=false){
     setDirty(isDirty());
     renderKpi();
     renderCircuitList();
@@ -970,14 +1046,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderKpi(){
-    const circuits=Object.values(state.circuits);
+    const circuits=Object.values(state.circuits || {});
     const total=circuits.length;
     const dia=circuits.filter(c=>c.type==="DIA").length;
     const dplc=circuits.filter(c=>c.type==="DPLC").length;
     const avg=total?Math.round(circuits.reduce((a,c)=>a+percentOf(c),0)/total):0;
     const hasRemark=circuits.filter(c=>(c.remark||"").trim().length>0 && percentOf(c)<100).length;
     $("kpi").innerHTML = `
-      <div class="box"><div class="n">${total}</div><div class="t">งานค้าง (บนเว็บ)</div></div>
+      <div class="box"><div class="n">${total}</div><div class="t">งานค้าง</div></div>
       <div class="box"><div class="n">${dia}</div><div class="t">DIA</div></div>
       <div class="box"><div class="n">${dplc}</div><div class="t">DPLC</div></div>
       <div class="box"><div class="n">${avg}%</div><div class="t">Avg progress</div></div>
@@ -988,7 +1064,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderCircuitList(){
     const q = ($("search").value||"").toLowerCase().trim();
     const ft = $("filterType").value;
-    let list = Object.values(state.circuits);
+    let list = Object.values(state.circuits || {});
 
     if(ft!=="ALL") list=list.filter(c=>c.type===ft);
     if(q) list=list.filter(c=>[c.sof,c.cid,c.name,c.m].some(v=>(v||"").toLowerCase().includes(q)));
@@ -1029,7 +1105,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
       `;
-    }).join("") || `<div class="muted">ยังไม่มีวงจร</div>`;
+    }).join("") || `<div class="muted">ยังไม่มีงานค้าง</div>`;
 
     $("circuitList").querySelectorAll(".item").forEach(el=>{
       el.addEventListener("click", ()=>{
@@ -1058,7 +1134,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }).join("") || `<tr><td colspan="4" class="muted">วันนี้ยังไม่มี log</td></tr>`;
 
-    const circuits=Object.values(state.circuits).slice().sort((a,b)=>percentOf(b)-percentOf(a));
+    const circuits=Object.values(state.circuits||{}).slice().sort((a,b)=>percentOf(b)-percentOf(a));
     $("overviewTable").innerHTML = circuits.slice(0,18).map(c=>{
       const pct=percentOf(c);
       const nxt=nextStepIndex(c);
@@ -1074,9 +1150,9 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${remark?escapeHtml(remark):"<span class='muted'>-</span>"}</td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="5" class="muted">ยังไม่มีวงจร</td></tr>`;
+    }).join("") || `<tr><td colspan="5" class="muted">ยังไม่มีงานค้าง</td></tr>`;
 
-    $("summaryTable").innerHTML = Object.values(state.circuits)
+    $("summaryTable").innerHTML = Object.values(state.circuits||{})
       .slice()
       .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))
       .map(c=>{
@@ -1097,7 +1173,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <td>${remark?escapeHtml(remark):"<span class='muted'>-</span>"}</td>
           </tr>
         `;
-      }).join("") || `<tr><td colspan="9" class="muted">ยังไม่มีวงจร</td></tr>`;
+      }).join("") || `<tr><td colspan="9" class="muted">ยังไม่มีงานค้าง</td></tr>`;
   }
 
   function renderDetail(){
@@ -1132,7 +1208,7 @@ document.addEventListener("DOMContentLoaded", () => {
       : "ยังไม่มีวันติดตั้ง";
 
     const recent=[];
-    for(const d of Object.keys(state.logs).sort().reverse()){
+    for(const d of Object.keys(state.logs||{}).sort().reverse()){
       const arr=state.logs[d]||[];
       for(let i=arr.length-1;i>=0;i--){
         const l=arr[i];
@@ -1144,7 +1220,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if(recent.length>=12) break;
     }
     $("recentLog").innerHTML = recent.length ? recent.map(r=>{
-      return `<div>• <span class="mono">${escapeHtml(r.date)} ${escapeHtml(r.time)}</span> — <span class="mono">${escapeHtml(r.action)}</span> ${escapeHtml(r.detail||"")} <span class="muted small">(${escapeHtml(r.actor||"")})</span></div>`;
+      const step = (typeof r.stepNo==="number" && r.stepName) ? ` • Step ${r.stepNo}: ${r.stepName}` : "";
+      return `<div>• <span class="mono">${escapeHtml(r.date)} ${escapeHtml(r.time)}</span> — <span class="mono">${escapeHtml(r.action)}</span>${step} ${escapeHtml(r.detail||"")} <span class="muted small">(${escapeHtml(r.actor||"")})</span></div>`;
     }).join("") : `<span class="muted">ยังไม่มี log</span>`;
 
     $("steps").innerHTML = STEPS.map((name, idx)=>{
@@ -1170,41 +1247,62 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /** ✅ แก้ toggleStep: ติ๊กครบแล้ว archive หายจากเว็บ */
+  // ✅ งานเสร็จแล้วให้หายจากเว็บ: ย้ายไป doneCircuits (เก็บไว้ในเครื่อง optional) และลบจาก circuits
+  function archiveCircuitAsDone_(c, doneAt){
+    const doneCopy = JSON.parse(JSON.stringify(c));
+    doneCopy.doneAt = doneAt || new Date().toISOString();
+    state.doneCircuits = state.doneCircuits || {};
+    state.doneCircuits[c.id] = doneCopy;
+
+    delete state.circuits[c.id];
+    if(state.selectedId === c.id) state.selectedId = null;
+  }
+
   function toggleStep(id, idx, checked){
-    const c = state.circuits[id];
-    if(!c) return;
-
-    if(!c.stepsDone) c.stepsDone = {};
-    if(!c.stepsDone[idx]) c.stepsDone[idx] = { done:false, date:"" };
-
-    c.stepsDone[idx].done = checked;
-    c.stepsDone[idx].date = checked ? todayStr() : "";
-
+    const c=state.circuits[id]; if(!c) return;
+    if(!c.stepsDone) c.stepsDone={};
+    if(!c.stepsDone[idx]) c.stepsDone[idx]={done:false,date:""};
+    c.stepsDone[idx].done=checked;
+    c.stepsDone[idx].date=checked?todayStr():"";
     touchUpdate(c);
 
-    addLogCircuit(c, checked ? "STEP_CHECK" : "STEP_UNCHECK", `${idx+1}. ${STEPS[idx]}`);
+    const stepNo = idx+1;
+    const stepName = STEPS[idx];
 
-    let archived = false;
-    if(checked){
-      archived = archiveIfDone(c);
+    addLogCircuit(c, checked?"STEP_CHECK":"STEP_UNCHECK", `${stepNo}. ${stepName}`, {
+      stepNo, stepName
+    });
+
+    // ถ้าติ๊ก step 21 = เสร็จ → ย้ายออกจากเว็บอัตโนมัติ
+    if(checked && idx === STEP_21_IDX){
+      addLogCircuit(c, "CIRCUIT_DONE", `งานเสร็จแล้ว (Step ${stepNo})`, { stepNo, stepName });
+      archiveCircuitAsDone_(c, new Date().toISOString());
+      toast("งานเสร็จแล้ว → ย้ายออกจากเว็บ (อยู่ในชีทหลัง Sync)");
+      save(true);
+      renderAll(true);
+      switchRightTab("dashboard");
+      return;
+    }
+
+    // ถ้าติ๊กครบ 100% (เช่นติ๊กหลาย step จนเต็ม) → ก็ย้ายเช่นกัน
+    if(checked && isCompleted(c)){
+      addLogCircuit(c, "CIRCUIT_DONE", `งานเสร็จแล้ว (ครบทุกขั้น)`, { stepNo, stepName });
+      archiveCircuitAsDone_(c, new Date().toISOString());
+      toast("งานเสร็จแล้ว → ย้ายออกจากเว็บ (อยู่ในชีทหลัง Sync)");
+      save(true);
+      renderAll(true);
+      switchRightTab("dashboard");
+      return;
     }
 
     save(true);
-
-    if(archived){
-      toast("✅ งานนี้ DONE แล้ว → หายจากเว็บ (เก็บไว้ใน Sheet)");
-      switchRightTab("dashboard");
-    }else{
-      toast(checked ? "ติ๊กเพิ่ม + ลง log แล้ว" : "ยกเลิกติ๊ก + ลง log แล้ว");
-    }
-
+    toast(checked?"ติ๊กเพิ่ม + ลง log แล้ว":"ยกเลิกติ๊ก + ลง log แล้ว");
     renderAll(true);
   }
 
   function renderDailyCircuitOptions(){
     const sel=$("logCircuit");
-    const list=Object.values(state.circuits).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    const list=Object.values(state.circuits||{}).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
     sel.innerHTML = `<option value="">(ทุกวงจร + system)</option>` + list.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} • ${escapeHtml(c.cid)}</option>`).join("");
   }
 
@@ -1230,7 +1328,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${escapeHtml(l.actor||"")}</td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="9" class="muted">ไม่มี log ในวันนี้</td></tr>`;
+    }).join("") || `<tr><td colspan="9" class="muted">ไม่มี log ในวันนี้ (ถ้าเพิ่ง Sync แล้ว log จะถูกล้างในเครื่อง)</td></tr>`;
   }
 
   function monthName(d){ return d.toLocaleString("en-US",{month:"long", year:"numeric"}); }
@@ -1270,7 +1368,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return `<div class="chip ${cls}"><span class="mono">${escapeHtml(e.slot)}</span><span>${escapeHtml(e.title)}</span></div>`;
       });
 
-      const installs = Object.values(state.circuits)
+      const installs = Object.values(state.circuits||{})
         .filter(c=>{
           if(filter!=="ALL" && c.type!==filter) return false;
           return c.installDate===ds;
@@ -1324,7 +1422,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const allDay = hasAllDay(modalDay);
     $("dayInstallBlockHint").textContent = allDay ? "⚠ วันนี้ Full day event → เพิ่ม Install ไม่ได้" : "";
 
-    const circuits = Object.values(state.circuits).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    const circuits = Object.values(state.circuits||{}).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
     $("dayInstallCircuit").innerHTML = circuits.length
       ? circuits.map(c=>`<option value="${c.id}">${escapeHtml(c.type)} • ${escapeHtml(c.cid)} • ${escapeHtml(c.name)}${c.installDate?` (มี ${c.installDate})`:``}</option>`).join("")
       : `<option value="">(no circuits)</option>`;
@@ -1423,6 +1521,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /** ===== startup ===== */
+  // ✅ เรียก auto-clean ตอนเปิดหน้า (ถ้าเปลี่ยนเดือนแล้ว)
+  autoCleanOnNewMonth();
+
   setDirty(isDirty());
   renderAll(true);
   switchRightTab("dashboard");
