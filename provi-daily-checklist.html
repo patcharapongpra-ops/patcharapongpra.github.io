@@ -3,33 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Provi Portal – Daily Checklist</title>
+  <title>Provi/PM – Circuit Tracker</title>
   <style>
     :root{
-      --bg:#0b0f14; --card:#121a24; --muted:#9bb1c8; --text:#eaf2ff; --line:#243245;
-      --accent:#ff8a2a; --accent2:#ffb36b; --good:#2ecc71; --bad:#ff4d6d; --warn:#f1c40f;
-      --chip:#182434;
+      --bg:#0b0f14; --card:#121a24; --muted:#8aa0b8; --text:#e7f0fb; --line:#223043;
+
+      /* ORANGE THEME */
+      --accent:#ff7a18;
+      --accent2:#ff9a3c;
+
+      --warn:#f1c40f; --bad:#ff5c7a; --good:#32d583; --chip:#182434;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#0b0f14,#070a0d);color:var(--text);}
-    a{color:inherit}
-    header{position:sticky;top:0;z-index:20;background:rgba(11,15,20,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+    header{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
     .wrap{max-width:1500px;margin:0 auto;padding:14px;}
     .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
     .spacer{flex:1}
     h1{margin:0;font-size:16px;}
     .sub{color:var(--muted);font-size:12px;margin-top:4px;}
-    .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:800;}
-    .btn:hover{border-color:#334a68}
-    .btn.primary{background:linear-gradient(180deg,#3b2414,#2a180d);border-color:#7a461f}
-    .btn.primary:hover{border-color:#b4622a}
-    .btn.ghost{background:transparent}
+    .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:900;}
+    .btn:hover{border-color:#2f425d}
+    .btn.primary{
+      background:linear-gradient(180deg, rgba(255,122,24,.95), rgba(216,95,15,.95));
+      border-color: rgba(255,122,24,.55);
+      color:#1a0d05;
+    }
     .btn.danger{background:linear-gradient(180deg,#5a1c2a,#3a101b);border-color:#a52b47}
     .btn[disabled]{opacity:.45;cursor:not-allowed}
     .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:11px;color:#cfe3ff;white-space:nowrap;}
-    .pill.good{border-color:#1c5a3a;color:#d1ffe6}
-    .pill.bad{border-color:#6b1f2f;color:#ffd1dc}
     .pill.warn{border-color:#6b5a14;color:#ffeaa7}
+    .pill.bad{border-color:#6b1f2f;color:#ffd1dc}
+    .pill.good{border-color:#1c5a3a;color:#d1ffe6}
     .card{background:rgba(18,26,36,.92);border:1px solid var(--line);border-radius:16px;padding:14px;}
     .muted{color:var(--muted);font-size:12px;}
     label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
@@ -37,19 +42,19 @@
       width:100%;background:#0e1520;border:1px solid var(--line);color:var(--text);
       padding:10px;border-radius:12px;outline:none;
     }
-    textarea{min-height:70px;resize:vertical}
+    textarea{min-height:54px;resize:vertical}
     .grid{display:grid;gap:12px;}
-    @media(min-width:1100px){ .grid.app{grid-template-columns:420px 1fr;} }
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-    .tab{padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:#0e1520;color:var(--text);cursor:pointer;font-weight:900;font-size:12px;}
-    .tab.active{border-color:#b4622a;background:rgba(255,138,42,.12)}
+    @media(min-width:1100px){ .grid.app{grid-template-columns:430px 1fr;} }
     table{width:100%;border-collapse:collapse;}
     th,td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top;font-size:12px;}
-    th{color:#ffd8b8;text-align:left;font-weight:900;background:rgba(40,24,14,.55);position:sticky;top:0;}
+    th{color:#cfe3ff;text-align:left;font-weight:900;background:rgba(24,36,52,.6);position:sticky;top:0;}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+    .tab{padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:#0e1520;color:var(--text);cursor:pointer;font-weight:900;font-size:12px;}
+    .tab.active{border-color:rgba(255,122,24,.55);background:rgba(255,122,24,.12)}
     .item{background:#0e1520;border:1px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;}
-    .item:hover{border-color:#b4622a}
-    .item.active{border-color:#ff8a2a;box-shadow:0 0 0 2px rgba(255,138,42,.12) inset;}
+    .item:hover{border-color:#2f425d}
+    .item.active{border-color:rgba(255,122,24,.55);box-shadow:0 0 0 2px rgba(255,122,24,.08) inset;}
     .item .title{font-weight:900;font-size:13px;margin-bottom:6px;}
     .item .meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:11px;}
     .bar{height:8px;background:#0b0f14;border:1px solid var(--line);border-radius:999px;overflow:hidden;}
@@ -57,14 +62,44 @@
     .step{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:14px;background:#0e1520;margin-top:8px;}
     .step input[type="checkbox"]{width:18px;height:18px;margin-top:2px;}
     .step .name{font-weight:900;font-size:12px;}
+    .step .done{color:#bfe9ff;font-size:11px;margin-top:4px;}
     .toast{position:fixed;right:16px;bottom:16px;background:#0e1520;border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:none;z-index:80;}
+
+    /* Calendar */
+    .calHead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px;}
+    .calDow{font-size:11px;color:#cfe3ff;background:rgba(24,36,52,.6);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-weight:900;}
+    .calCell{
+      min-height:120px;background:#0e1520;border:1px solid var(--line);border-radius:14px;padding:8px;
+      display:flex;flex-direction:column;gap:6px;cursor:pointer;
+    }
+    .calCell:hover{border-color:#2f425d}
+    .calCell.dim{opacity:.45}
+    .calCell .dateRow{display:flex;gap:8px;align-items:center;}
+    .calCell .dnum{font-weight:900;}
+    .chip{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:11px;background:#101a27;overflow:hidden}
+    .chip.install{border-color:rgba(255,122,24,.55)}
+    .chip.event{border-color:#5a4d1c}
+    .chip.eventAll{border-color:#7a5b1c}
+    .chip.bad{border-color:#7a2840}
+    .chips{display:flex;flex-direction:column;gap:6px;overflow:hidden}
+
+    /* modal */
+    .modalBackdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:70;
+    }
+    .modal{width:min(980px,96vw);max-height:90vh;overflow:auto;background:#0e1520;border:1px solid var(--line);border-radius:16px;padding:14px;}
+    .modal h3{margin:0;font-size:14px;}
+    .split{display:grid;gap:12px;}
+    @media(min-width:900px){ .split{grid-template-columns:1fr 1fr;} }
+    .small{font-size:11px}
+    .warnTxt{color:var(--warn)}
+    .badTxt{color:var(--bad)}
     .kpi{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
-    .kpi .box{flex:1;min-width:160px;background:#0e1520;border:1px solid var(--line);border-radius:14px;padding:10px;}
+    .kpi .box{flex:1;min-width:150px;background:#0e1520;border:1px solid var(--line);border-radius:14px;padding:10px;}
     .box .n{font-size:18px;font-weight:900;}
     .box .t{font-size:11px;color:var(--muted);}
-    .divider{height:1px;background:var(--line);margin:12px 0;}
-    .rightTop{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .small{font-size:11px}
+    pre{white-space:pre-wrap;word-break:break-word;}
   </style>
 </head>
 
@@ -73,1122 +108,1326 @@
   <div class="wrap">
     <div class="row">
       <div>
-        <h1>Provi Portal – Daily Checklist</h1>
-        <div class="sub">เก็บในเครื่อง: งานค้าง + เดือนนี้ • Sync ไป Google Sheet รายเดือน • เสร็จ = ติ๊ก Step 21</div>
+        <h1>Provi/PM – Circuit Tracker</h1>
+        <div class="sub">Dashboard • Circuit Detail • Daily Log • Calendar • Sync ไป Google Drive (Apps Script)</div>
       </div>
       <div class="spacer"></div>
 
-      <span class="pill" id="pillUser">user: -</span>
-      <span class="pill" id="pillYM">ym: -</span>
-      <span class="pill" id="pillSync">sync: -</span>
+      <span class="pill" id="userPill">user: -</span>
+      <span class="pill" id="dirtyPill">dirty: no</span>
 
-      <button class="btn" id="btnSyncNow">Sync now</button>
-      <button class="btn ghost" id="btnLogout">Logout</button>
+      <button class="btn" id="btnSync">Sync now</button>
+      <button class="btn danger" id="btnForce">Force sync</button>
+      <button class="btn" id="btnOpenDrive">Open Drive</button>
+
+      <a class="btn" href="index.html">Back</a>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <span class="muted small mono" id="syncStatus">-</span>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-  <!-- LOGIN PANEL -->
-  <div id="loginPanel" class="card" style="max-width:560px;margin:18px auto;display:none;">
-    <h2 style="margin:0 0 6px 0;font-size:14px;">Login</h2>
-    <div class="muted">ล็อกอินเพื่อใช้งานและ Sync เข้า Google Sheet</div>
+  <div class="grid app">
+    <!-- LEFT -->
+    <aside class="card">
+      <div class="row">
+        <h2 style="margin:0;font-size:14px;">Circuits</h2>
+        <div class="spacer"></div>
+        <span class="pill" id="todayPill"></span>
+      </div>
 
-    <label>Username</label>
-    <input id="loginUser" placeholder="Patcharapong / Nawaphon" />
+      <div class="kpi" id="kpi"></div>
 
-    <label>Password</label>
-    <input id="loginPass" type="password" placeholder="รหัสผ่าน" />
+      <label>ค้นหา</label>
+      <input id="search" placeholder="ค้นด้วย SOF / CID / ชื่อ / M" />
 
-    <label>Apps Script Web App URL</label>
-    <input id="loginApi" placeholder="ใส่ URL .../exec" />
-
-    <div class="row" style="margin-top:12px;">
-      <button class="btn primary" id="btnLogin">Login</button>
-      <div class="spacer"></div>
-      <span class="muted small">* URL จะถูกจำไว้ในเครื่องนี้</span>
-    </div>
-  </div>
-
-  <!-- APP -->
-  <div id="appPanel" style="display:none;">
-    <div class="grid app">
-      <!-- LEFT -->
-      <aside class="card">
-        <div class="row">
-          <h2 style="margin:0;font-size:14px;">Circuits (Active)</h2>
-          <div class="spacer"></div>
-          <button class="btn primary" id="btnToggleAdd">+ เพิ่มวงจร</button>
+      <div class="row">
+        <div style="flex:1;min-width:180px;">
+          <label>กรองประเภท</label>
+          <select id="filterType">
+            <option value="ALL">ทั้งหมด</option>
+            <option value="DIA">DIA (CID ขึ้นต้น C)</option>
+            <option value="DPLC">DPLC (CID ขึ้นต้น P)</option>
+          </select>
         </div>
+        <div style="flex:1;min-width:180px;">
+          <label>เรียง</label>
+          <select id="sortMode">
+            <option value="lastUpdate">Last update ล่าสุด</option>
+            <option value="percent">เปอร์เซ็นต์มาก→น้อย</option>
+            <option value="name">ชื่อ A→Z</option>
+            <option value="created">สร้างก่อน→หลัง</option>
+          </select>
+        </div>
+      </div>
 
-        <div class="kpi" id="kpi"></div>
+      <div id="circuitList" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;"></div>
+    </aside>
+
+    <!-- RIGHT -->
+    <section class="card">
+      <div class="row">
+        <h2 id="rightTitle" style="margin:0;font-size:14px;">Dashboard</h2>
+        <div class="spacer"></div>
+        <button class="btn" id="btnGoDashboard">Dashboard</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-rtab="dashboard">Dashboard</button>
+        <button class="tab" data-rtab="detail">Circuit Detail</button>
+        <button class="tab" data-rtab="daily">Daily Log</button>
+        <button class="tab" data-rtab="calendar">Calendar</button>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="rtab-dashboard" style="margin-top:10px;">
+        <div class="row">
+          <button class="btn primary" id="btnToggleAdd">+ เพิ่มวงจรใหม่</button>
+          <span class="muted small" id="addHint"></span>
+          <div class="spacer"></div>
+        </div>
 
         <div id="addPanel" class="card" style="display:none;background:#0e1520;border-color:var(--line);margin-top:10px;">
           <div class="row">
             <div style="font-weight:900;">เพิ่มวงจรใหม่</div>
             <div class="spacer"></div>
-            <span class="muted small">Type auto จาก CID (C=DIA / P=DPLC)</span>
+            <span class="muted small">Type auto จาก CID • ถ้ามี M ใส่ได้ เช่น M123 หรือ M123,M124</span>
           </div>
-
           <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr 1.2fr 1fr auto;margin-top:10px;">
-            <div><label style="margin-top:0;">SOF</label><input id="addSof" placeholder="SOF" /></div>
-            <div><label style="margin-top:0;">CID</label><input id="addCid" placeholder="C... หรือ P..." /></div>
-            <div><label style="margin-top:0;">ชื่อ</label><input id="addName" placeholder="ชื่องาน" /></div>
-            <div><label style="margin-top:0;">M (ถ้ามี)</label><input id="addM" placeholder="เช่น M123 หรือ M123,M124" /></div>
+            <div>
+              <label style="margin-top:0;">SOF</label>
+              <input id="addSof" placeholder="SOF" />
+            </div>
+            <div>
+              <label style="margin-top:0;">CID</label>
+              <input id="addCid" placeholder="CID (C... หรือ P...)" />
+            </div>
+            <div>
+              <label style="margin-top:0;">ชื่อ</label>
+              <input id="addName" placeholder="ชื่องาน" />
+            </div>
+            <div>
+              <label style="margin-top:0;">มี M ไหม (ระบุ M)</label>
+              <input id="addM" placeholder="เช่น M123 หรือ M123,M124" />
+            </div>
             <div style="display:flex;align-items:flex-end;">
               <button class="btn primary" id="btnAddCircuit" style="width:120px;">Add</button>
             </div>
           </div>
-          <div class="muted small" id="addHint" style="margin-top:10px;"></div>
         </div>
 
-        <label>ค้นหา</label>
-        <input id="search" placeholder="ค้นด้วย SOF / CID / ชื่อ / M" />
-
-        <div class="row">
-          <div style="flex:1;min-width:180px;">
-            <label>กรองประเภท</label>
-            <select id="filterType">
-              <option value="ALL">ทั้งหมด</option>
-              <option value="DIA">DIA (CID ขึ้นต้น C)</option>
-              <option value="DPLC">DPLC (CID ขึ้นต้น P)</option>
-            </select>
+        <div style="display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-top:12px;">
+          <div>
+            <label>วันนี้ทำอะไรบ้าง (Log วันนี้)</label>
+            <div style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
+              <table>
+                <thead><tr><th>เวลา</th><th>วงจร/อีเวนต์</th><th>Action</th><th>Detail</th></tr></thead>
+                <tbody id="todayLogTable"></tbody>
+              </table>
+            </div>
           </div>
-          <div style="flex:1;min-width:180px;">
-            <label>เรียง</label>
-            <select id="sortMode">
-              <option value="lastUpdate">Last update ล่าสุด</option>
-              <option value="percent">เปอร์เซ็นต์มาก→น้อย</option>
-              <option value="name">ชื่อ A→Z</option>
-              <option value="created">สร้างก่อน→หลัง</option>
-            </select>
+          <div>
+            <label>ภาพรวม (Progress / Next / Install / Remark)</label>
+            <div style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
+              <table>
+                <thead><tr><th>วงจร</th><th>%</th><th>Next</th><th>Install</th><th>Remark</th></tr></thead>
+                <tbody id="overviewTable"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div class="divider"></div>
-        <div id="circuitList" style="display:flex;flex-direction:column;gap:10px;"></div>
-      </aside>
-
-      <!-- RIGHT -->
-      <section class="card">
-        <div class="rightTop">
-          <h2 id="rightTitle" style="margin:0;font-size:14px;">Dashboard</h2>
-          <div class="spacer"></div>
-          <button class="btn" id="btnGoDashboard">Dashboard</button>
-          <button class="btn" id="btnGoDetail">Circuit Detail</button>
-          <button class="btn" id="btnGoEvents">Events</button>
+        <div style="margin-top:12px;">
+          <label>Summary ทั้งหมด</label>
+          <div style="max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
+            <table>
+              <thead>
+                <tr><th>วงจร</th><th>SOF</th><th>CID</th><th>Type</th><th>%</th><th>Last update</th><th>M</th><th>Install</th><th>Remark</th></tr>
+              </thead>
+              <tbody id="summaryTable"></tbody>
+            </table>
+          </div>
         </div>
+      </div>
 
-        <div class="tabs">
-          <button class="tab active" data-tab="dashboard">Dashboard</button>
-          <button class="tab" data-tab="detail">Circuit Detail</button>
-          <button class="tab" data-tab="events">Events</button>
-        </div>
+      <!-- Detail -->
+      <div id="rtab-detail" style="display:none;margin-top:10px;">
+        <div id="noSelected" class="muted">ยังไม่ได้เลือกวงจร (เลือกจาก list ทางซ้าย)</div>
 
-        <!-- Dashboard -->
-        <div id="tab-dashboard" style="margin-top:10px;">
-          <div class="row">
-            <span class="pill good" id="pillMonthInfo"></span>
+        <div id="detailPanel" style="display:none;">
+          <div class="row" style="align-items:flex-start;">
+            <div style="flex:1;">
+              <div class="row">
+                <span class="pill">Type: <b id="dType">-</b></span>
+                <span class="pill">Progress: <b id="dPct">0%</b></span>
+                <span class="pill">Last: <span class="mono" id="dLast">-</span></span>
+                <span class="pill">Install: <span class="mono" id="dInstall">-</span></span>
+              </div>
+              <div style="margin-top:10px;" class="bar"><div id="dBar"></div></div>
+            </div>
+            <div><button class="btn danger" id="btnDelete">Delete</button></div>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" id="btnToggleMeta">✏️ แก้ข้อมูลวงจร (SOF/CID/ชื่อ/M)</button>
+            <span class="muted small" id="editHint"></span>
             <div class="spacer"></div>
-            <span class="muted small">Auto-sync ทุก 60 นาที (เฉพาะเมื่อมีการเปลี่ยนแปลง)</span>
           </div>
-
-          <div style="margin-top:12px;">
-            <label>Log เดือนนี้ (ล่าสุด)</label>
-            <div style="max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>doneAt</th><th>CID</th><th>Action</th><th>Step</th><th>Detail</th>
-                  </tr>
-                </thead>
-                <tbody id="logTable"></tbody>
-              </table>
+          <div id="metaPanel" class="card" style="display:none;background:#0e1520;border-color:var(--line);margin-top:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr 1.2fr 1fr;">
+              <div><label>SOF</label><input id="editSof" /></div>
+              <div><label>CID</label><input id="editCid" /></div>
+              <div><label>ชื่อ</label><input id="editName" /></div>
+              <div><label>M (ระบุ M ถ้ามี)</label><input id="editM" /></div>
             </div>
-          </div>
-
-          <div style="margin-top:12px;">
-            <label>Work Status (เดือนนี้)</label>
-            <div style="max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>CID</th><th>%</th><th>Next</th><th>Install</th><th>Remark</th><th>Last</th>
-                  </tr>
-                </thead>
-                <tbody id="wsTable"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Detail -->
-        <div id="tab-detail" style="display:none;margin-top:10px;">
-          <div id="noSelected" class="muted">ยังไม่ได้เลือกวงจร (เลือกจาก list ทางซ้าย)</div>
-
-          <div id="detailPanel" style="display:none;">
-            <div class="row">
-              <span class="pill">Type: <b id="dType">-</b></span>
-              <span class="pill">Progress: <b id="dPct">0%</b></span>
-              <span class="pill">Last: <span class="mono" id="dLast">-</span></span>
-              <span class="pill">Install: <span class="mono" id="dInstall">-</span></span>
-              <div class="spacer"></div>
-              <button class="btn danger" id="btnArchiveDone">Archive (เสร็จแล้ว)</button>
-            </div>
-
-            <div style="margin-top:10px;" class="bar"><div id="dBar"></div></div>
-
-            <div class="divider"></div>
-
-            <div class="row">
-              <button class="btn" id="btnToggleMeta">✏️ แก้ SOF/CID/ชื่อ/M</button>
-              <div class="spacer"></div>
-              <button class="btn" id="btnToggleInstall">📌 ตั้งวันติดตั้ง</button>
-            </div>
-
-            <div id="metaPanel" class="card" style="display:none;background:#0e1520;border-color:var(--line);margin-top:10px;">
-              <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr 1.2fr 1fr;">
-                <div><label>SOF</label><input id="editSof" /></div>
-                <div><label>CID</label><input id="editCid" /></div>
-                <div><label>ชื่อ</label><input id="editName" /></div>
-                <div><label>M</label><input id="editM" /></div>
-              </div>
-              <div class="row" style="margin-top:10px;">
-                <button class="btn primary" id="btnSaveMeta">บันทึก</button>
-                <div class="spacer"></div>
-                <button class="btn" id="btnCloseMeta">Close</button>
-              </div>
-            </div>
-
-            <div id="installPanel" class="card" style="display:none;background:#0e1520;border-color:var(--line);margin-top:10px;">
-              <div style="display:grid;gap:10px;grid-template-columns:240px 1fr auto;">
-                <div>
-                  <label style="margin-top:0;">Install date</label>
-                  <input type="date" id="installDate" />
-                </div>
-                <div>
-                  <label style="margin-top:0;">Note (optional)</label>
-                  <input id="installNote" placeholder="เช่น onsite / นัดผู้รับเหมา" />
-                </div>
-                <div style="display:flex;align-items:flex-end;gap:10px;">
-                  <button class="btn primary" id="btnSaveInstall">Save</button>
-                  <button class="btn danger" id="btnClearInstall">Clear</button>
-                </div>
-              </div>
-            </div>
-
-            <label style="margin-top:12px;">Remark (ติดอะไร/รอใคร)</label>
-            <textarea id="remark" placeholder="เช่น รอ IP / รอ WHA / รอของ"></textarea>
             <div class="row" style="margin-top:10px;">
-              <button class="btn primary" id="btnSaveRemark">บันทึก Remark</button>
+              <button class="btn primary" id="btnSaveMeta">บันทึก</button>
               <div class="spacer"></div>
-              <span class="muted small">บันทึกแล้วจะลง log พร้อม doneAt</span>
-            </div>
-
-            <div style="margin-top:14px;">
-              <h3 style="margin:0 0 6px 0;font-size:13px;">Checklist (21 ขั้น)</h3>
-              <div class="muted small">เสร็จงานเมื่อ “ติ๊ก Step 21 (ปิด CR)”</div>
-              <div id="steps"></div>
+              <button class="btn" id="btnCloseMeta">Close</button>
             </div>
           </div>
-        </div>
 
-        <!-- Events -->
-        <div id="tab-events" style="display:none;margin-top:10px;">
-          <div class="row">
-            <div style="flex:1;min-width:240px;">
-              <label>Date</label>
-              <input type="date" id="evDate" />
-            </div>
-            <div style="flex:1;min-width:240px;">
-              <label>Slot</label>
-              <select id="evSlot">
-                <option value="AM">เช้า (AM)</option>
-                <option value="PM">บ่าย (PM)</option>
-                <option value="ALL">เต็มวัน (ALL)</option>
-              </select>
-            </div>
-          </div>
-          <label>Title</label>
-          <input id="evTitle" placeholder="เช่น ลา / อบรม / ไม่ทำงาน" />
-          <label>Note (optional)</label>
-          <input id="evNote" placeholder="รายละเอียดเพิ่มเติม" />
-          <div class="row" style="margin-top:10px;">
-            <button class="btn primary" id="btnAddEvent">Add event</button>
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" id="btnToggleInstall">📌 ตั้ง/แก้วันติดตั้ง (1 วงจร 1 วัน)</button>
+            <span class="muted small" id="installHint"></span>
             <div class="spacer"></div>
-            <span class="muted small">ข้อมูลจะส่งไปชีท Events ของเดือนนี้</span>
+          </div>
+          <div id="installPanel" class="card" style="display:none;background:#0e1520;border-color:var(--line);margin-top:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns:240px 1fr auto;">
+              <div>
+                <label style="margin-top:0;">Install date</label>
+                <input type="date" id="installDate" />
+              </div>
+              <div>
+                <label style="margin-top:0;">Note (optional)</label>
+                <input id="installNote" placeholder="เช่น onsite / นัดผู้รับเหมา / คุมงาน" />
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:10px;">
+                <button class="btn primary" id="btnSaveInstall">Save</button>
+                <button class="btn danger" id="btnClearInstall">Clear</button>
+              </div>
+            </div>
+            <div class="muted small" style="margin-top:10px;">
+              * ถ้าวันนั้นมี Personal event แบบ “เต็มวัน” จะไม่ให้ตั้งวันติดตั้ง
+            </div>
+          </div>
+
+          <label style="margin-top:14px;">Remark (ติดอะไร/รอใคร)</label>
+          <input id="remark" placeholder="เช่น รอ IP / รอ WHA / รอของ" />
+          <div class="row" style="margin-top:10px;">
+            <button class="btn primary" id="btnSaveRemark">บันทึก Remark</button>
+            <div class="spacer"></div>
+            <span class="muted small">บันทึกแล้วจะลง log พร้อมเวลา</span>
           </div>
 
           <div style="margin-top:12px;">
-            <label>Events เดือนนี้</label>
-            <div style="max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
-              <table>
-                <thead><tr><th>Date</th><th>Slot</th><th>Title</th><th>Note</th><th>Del</th></tr></thead>
-                <tbody id="evTable"></tbody>
-              </table>
+            <label>Log ล่าสุดของวงจรนี้</label>
+            <div style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:8px;background:#0e1520;">
+              <div id="recentLog" class="small muted">-</div>
             </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <h3 style="margin:0 0 6px 0;font-size:13px;">Checklist (21 ขั้น)</h3>
+            <div class="muted small">* Step 14 ใช้ตรวจว่า “ใกล้วันติดตั้งแล้วแต่ยังไม่ถึงขั้นตอน 14”</div>
+            <div id="steps"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily -->
+      <div id="rtab-daily" style="display:none;margin-top:10px;">
+        <div class="row">
+          <div style="flex:1;min-width:240px;">
+            <label>เลือกวันที่</label>
+            <input type="date" id="logDate" />
+          </div>
+          <div style="flex:1;min-width:240px;">
+            <label>กรองวงจร</label>
+            <select id="logCircuit"></select>
           </div>
         </div>
 
-      </section>
-    </div>
+        <div style="margin-top:10px;max-height:620px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
+          <table>
+            <thead>
+              <tr><th>เวลา</th><th>SOF</th><th>CID</th><th>Type</th><th>Action</th><th>Detail</th><th>Remark snapshot</th><th>M</th><th>Actor</th></tr>
+            </thead>
+            <tbody id="dailyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div id="rtab-calendar" style="display:none;margin-top:10px;">
+        <div class="calHead">
+          <button class="btn" id="calPrev">‹</button>
+          <button class="btn" id="calToday">Today</button>
+          <button class="btn" id="calNext">›</button>
+          <span class="pill" id="calTitle"></span>
+          <div class="spacer"></div>
+
+          <div style="min-width:200px;">
+            <select id="calFilter">
+              <option value="ALL">All (DIA + DPLC)</option>
+              <option value="DIA">DIA only</option>
+              <option value="DPLC">DPLC only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="calGrid" id="calDowRow" style="margin-top:10px;"></div>
+        <div class="calGrid" id="calGrid"></div>
+
+        <div class="muted small" style="margin-top:10px;">
+          คลิกวันที่เพื่อเพิ่ม Install หรือ Personal event • ถ้า “เต็มวัน” แล้วจะเพิ่ม Install ไม่ได้ • ถ้าเพิ่ม Install ให้วันที่ใหม่ และวงจรมีวันอยู่แล้ว ระบบจะถาม confirm ก่อนย้ายวัน
+        </div>
+      </div>
+
+    </section>
   </div>
 </main>
+
+<!-- Calendar Day Modal -->
+<div class="modalBackdrop" id="dayModalBack">
+  <div class="modal">
+    <div class="row">
+      <h3 id="dayModalTitle">Day</h3>
+      <div class="spacer"></div>
+      <button class="btn" id="dayModalClose">Close</button>
+    </div>
+
+    <div class="split" style="margin-top:10px;">
+      <!-- Install add -->
+      <div class="card" style="background:#0b0f14;">
+        <div class="row">
+          <div style="font-weight:900;">Add install (ตั้งวันติดตั้งให้วงจร)</div>
+          <div class="spacer"></div>
+          <span class="muted small" id="dayInstallBlockHint"></span>
+        </div>
+        <label>เลือกวงจร</label>
+        <select id="dayInstallCircuit"></select>
+
+        <label>Note (optional)</label>
+        <input id="dayInstallNote" placeholder="เช่น onsite / นัดผู้รับเหมา" />
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="dayAddInstallBtn">Add</button>
+          <div class="spacer"></div>
+          <span class="muted small">วงจร 1 วงจรมี 1 วันเท่านั้น (ย้ายวันได้)</span>
+        </div>
+
+        <label style="margin-top:14px;">Install ของวันนี้</label>
+        <div style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
+          <table>
+            <thead><tr><th>วงจร</th><th>Note</th><th>Move</th><th>Action</th></tr></thead>
+            <tbody id="dayInstallList"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Event add -->
+      <div class="card" style="background:#0b0f14;">
+        <div class="row">
+          <div style="font-weight:900;">Add personal event</div>
+          <div class="spacer"></div>
+          <span class="muted small">เช้า / บ่าย / เต็มวัน</span>
+        </div>
+
+        <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr;">
+          <div>
+            <label>ช่วงเวลา</label>
+            <select id="dayEventSlot">
+              <option value="AM">เช้า (AM)</option>
+              <option value="PM">บ่าย (PM)</option>
+              <option value="ALL">เต็มวัน (ALL)</option>
+            </select>
+          </div>
+          <div>
+            <label>หัวข้อ</label>
+            <input id="dayEventTitle" placeholder="เช่น อบรม / ลา / ไม่ทำงาน" />
+          </div>
+        </div>
+
+        <label>Note (optional)</label>
+        <input id="dayEventNote" placeholder="เพิ่มเติม (optional)" />
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="dayAddEventBtn">Add</button>
+          <div class="spacer"></div>
+          <span class="muted small" id="dayEventRuleHint"></span>
+        </div>
+
+        <label style="margin-top:14px;">Personal event ของวันนี้</label>
+        <div style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:14px;">
+          <table>
+            <thead><tr><th>Slot</th><th>Title</th><th>Note</th><th>Del</th></tr></thead>
+            <tbody id="dayEventList"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="muted small" style="margin-top:10px;">
+      กติกา: ถ้ามี “เต็มวัน (ALL)” แล้วจะเพิ่มเช้า/บ่ายไม่ได้ และเพิ่ม Install ไม่ได้ • ถ้ามีเช้าแล้วเพิ่มบ่ายได้ (และกลับกัน) • เช้า/บ่ายซ้ำไม่ได้ • ถ้ามีเช้า/บ่ายแล้วเพิ่มเต็มวันไม่ได้
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-/** ======================
- * CONFIG
- * ======================= */
-// ใส่ URL ของ Apps Script Web App (ลงท้าย /exec)
-let APPS_SCRIPT_URL = localStorage.getItem("provi_api_url") || ""; // set from login
+document.addEventListener("DOMContentLoaded", () => {
+  /** ===== CONFIG ===== */
+  const API_URL = "https://script.google.com/macros/s/AKfycbwBHkVJ6TWyG0-pefvL1alAlB5RZVsix_g7kdM4TfGp_qiyKLll7lof5iZZfjASBy3pvg/exec";
+  const ROOT_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk";
+  const AUTO_SYNC_MINUTES = 60;
 
-// storage keys
-const SESSION_KEY = "provi_session";           // {user, pass}
-const ACTIVE_KEY  = "provi_active";            // {circuits: {id: circuit}}
-const ACTIVE_MONTH_KEY = "provi_activeMonth";  // "YYYY-MM"
-const MONTHLY_PREFIX = "provi_monthly_";       // + YYYY-MM => {logs:[], events:[], workStatus:[], dirty:true, lastHash, lastSyncAt}
+  const SESSION_KEY = "provi_session"; // {user,pass,ymLastSync}
+  const DIRTY_KEY_PREFIX = "provi_dirty_"; // per-user
+  const KEY_PREFIX = "provi_tracker_v3_";  // per-user
 
-const STEPS = [
-  "จอง SID","สร้าง SID บน CMDB","สร้าง Folder ไดฟ์กลาง","เปิด Task ไปแผนกที่เกี่ยวข้อง",
-  "ส่งเมลคิวงาน/สรุป requirement ให้ครบ","เช็ค stock / เบิกของ","เตรียม config ตามวงจร","คอนฟิกอุปกรณ์ให้พร้อม",
-  "ทำ 147","คอนฟิก Node","Shape Bandwidth","Add Zabbix + SMS Alert (ถ้า SOF ระบุ)","Add Graph",
-  "เช็คแผนวันติดตั้ง + นัดผู้รับเหมารับอุปกรณ์","ติดตั้ง ส่งเมลให้ลูกค้า","ปิด SR","Update Inventory",
-  "Update CMDB","Update CMDB (เพิ่มเติม/รายการที่ 2)","ทำ F-108","ปิด CR"
-];
-const STEP_DONE_IDX = 20; // Step 21 (0-based)
+  const $ = (id) => document.getElementById(id);
 
-/** ======================
- * HELPERS
- * ======================= */
-const $ = (id)=>document.getElementById(id);
+  /** ===== steps ===== */
+  const STEPS = [
+    "จอง SID","สร้าง SID บน CMDB","สร้าง Folder ไดฟ์กลาง","เปิด Task ไปแผนกที่เกี่ยวข้อง",
+    "ส่งเมลคิวงาน/สรุป requirement ให้ครบ","เช็ค stock / เบิกของ","เตรียม config ตามวงจร","คอนฟิกอุปกรณ์ให้พร้อม",
+    "ทำ 147","คอนฟิก Node","Shape Bandwidth","Add Zabbix + SMS Alert (ถ้า SOF ระบุ)","Add Graph",
+    "เช็คแผนวันติดตั้ง + นัดผู้รับเหมารับอุปกรณ์","ติดตั้ง ส่งเมลให้ลูกค้า","ปิด SR","Update Inventory",
+    "Update CMDB","Update CMDB (final check)","ทำ F-108","ปิด CR"
+  ];
+  const STEP_14_IDX = 13;
+  const STEP_21_IDX = 20;
 
-function toast(msg){
-  const t=$("toast");
-  t.textContent=msg;
-  t.style.display="block";
-  clearTimeout(toast._t);
-  toast._t=setTimeout(()=>t.style.display="none",1600);
-}
-
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
-}
-
-function uid(prefix="X"){
-  return prefix + Math.random().toString(16).slice(2) + Date.now().toString(16);
-}
-
-function ymNow(){
-  const d=new Date();
-  const y=d.getFullYear();
-  const m=String(d.getMonth()+1).padStart(2,"0");
-  return `${y}-${m}`;
-}
-
-function isoDate(d){
-  const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-function todayStr(){ return isoDate(new Date()); }
-
-function nowTime(){
-  const d=new Date();
-  const hh=String(d.getHours()).padStart(2,"0");
-  const mi=String(d.getMinutes()).padStart(2,"0");
-  const ss=String(d.getSeconds()).padStart(2,"0");
-  return `${hh}:${mi}:${ss}`;
-}
-function doneAtStr(){
-  // yyyy-mm-dd hh:mm:ss (ตามที่ Apps Script ใช้ format)
-  return `${todayStr()} ${nowTime()}`;
-}
-
-function loadJSON(key, fallback){
-  try{ return JSON.parse(localStorage.getItem(key)) ?? fallback; }
-  catch{ return fallback; }
-}
-function saveJSON(key, val){
-  localStorage.setItem(key, JSON.stringify(val));
-}
-
-function inferTypeFromCID(cid){
-  const c=(cid||"").trim().toUpperCase();
-  if(c.startsWith("C")) return "DIA";
-  if(c.startsWith("P")) return "DPLC";
-  return "INVALID";
-}
-
-function isStepDone(c, idx){
-  return !!(c.stepsDone && c.stepsDone[idx] && c.stepsDone[idx].done);
-}
-function percentOf(c){
-  const doneCount = STEPS.reduce((a,_,i)=>a+(isStepDone(c,i)?1:0),0);
-  return Math.round((doneCount/STEPS.length)*100);
-}
-function nextStepIndex(c){
-  for(let i=0;i<STEPS.length;i++) if(!isStepDone(c,i)) return i;
-  return null;
-}
-function isCompleted(c){
-  return isStepDone(c, STEP_DONE_IDX) || percentOf(c) === 100;
-}
-function lastUpdateStamp(c){
-  return `${c.lastUpdateDate||"-"} ${c.lastUpdateTime||"-"}`;
-}
-function touchUpdate(c){
-  c.lastUpdateDate = todayStr();
-  c.lastUpdateTime = nowTime();
-}
-
-/** ======================
- * STATE
- * ======================= */
-let session = loadJSON(SESSION_KEY, null); // {user, pass}
-let active  = loadJSON(ACTIVE_KEY, {circuits:{}});
-let currentYM = ymNow();
-
-function getMonthlyKey(ym){ return MONTHLY_PREFIX + ym; }
-function getMonthly(ym){
-  return loadJSON(getMonthlyKey(ym), { logs:[], events:[], workStatus:[], dirty:false, lastHash:"", lastSyncAt:"" });
-}
-function setMonthly(ym, obj){
-  saveJSON(getMonthlyKey(ym), obj);
-}
-
-function ensureActiveMonth(){
-  const saved = localStorage.getItem(ACTIVE_MONTH_KEY);
-  if(!saved){
-    localStorage.setItem(ACTIVE_MONTH_KEY, currentYM);
+  /** ===== session / login ===== */
+  function getSession(){
+    try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"); }catch{ return {}; }
   }
-}
+  function requireLogin(){
+    const s = getSession();
+    if(s.user && s.pass) return s;
+    location.href = "index.html";
+    return null;
+  }
+  const sess = requireLogin();
+  if(!sess) return;
 
-function updateHeaderPills(){
-  $("pillUser").textContent = `user: ${session?.user || "-"}`;
-  $("pillYM").textContent = `ym: ${currentYM}`;
-  const m = getMonthly(currentYM);
-  $("pillSync").textContent = m.lastSyncAt ? `sync: ${m.lastSyncAt}` : `sync: -`;
-  $("pillMonthInfo").textContent = `เดือนนี้: ${currentYM} • logs ${m.logs.length} • events ${m.events.length} • work ${m.workStatus.length}`;
-}
+  const actor = sess.user;
+  $("userPill").textContent = `user: ${actor}`;
 
-/** ======================
- * LOGIN / LOGOUT
- * ======================= */
-function showLogin(){
-  $("loginPanel").style.display = "";
-  $("appPanel").style.display = "none";
-  $("loginApi").value = APPS_SCRIPT_URL || "";
-}
-function showApp(){
-  $("loginPanel").style.display = "none";
-  $("appPanel").style.display = "";
-}
+  const KEY = KEY_PREFIX + actor;
+  const DIRTY_KEY = DIRTY_KEY_PREFIX + actor;
 
-$("btnLogin").addEventListener("click", async ()=>{
-  const user = ($("loginUser").value||"").trim();
-  const pass = ($("loginPass").value||"").trim();
-  const api  = ($("loginApi").value||"").trim();
-  if(!user || !pass || !api){ toast("กรอก user/pass และ URL ให้ครบ"); return; }
-
-  APPS_SCRIPT_URL = api;
-  localStorage.setItem("provi_api_url", api);
-
-  session = {user, pass};
-  saveJSON(SESSION_KEY, session);
-
-  // ทดสอบยิง doGet
-  try{
-    const r = await fetch(api, {method:"GET"});
-    if(!r.ok) throw new Error("API_NOT_OK");
-  }catch(e){
-    toast("URL API ใช้ไม่ได้/เข้าถึงไม่ได้");
-    return;
+  /** ===== state ===== */
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
+  function save(silent=false){
+    localStorage.setItem(KEY, JSON.stringify(state));
+    setDirty(true);
+    if(!silent) toast("บันทึกแล้ว");
   }
 
-  ensureActiveMonth();
-  showApp();
-  renderAll();
-  toast("Login แล้ว");
-});
+  // ✅ เพิ่ม doneCircuits เพื่อเก็บงานที่ archive ออกจากเว็บแล้ว
+  const state = load() || { selectedId:null, circuits:{}, doneCircuits:{}, events:[], logs:{} };
 
-$("btnLogout").addEventListener("click", ()=>{
-  localStorage.removeItem(SESSION_KEY);
-  session = null;
-  toast("Logout แล้ว");
-  showLogin();
-});
-
-/** ======================
- * ROLLOVER (NEW MONTH) - after successful sync
- * ======================= */
-function rolloverToNewMonth(newYM){
-  // keep only incomplete circuits
-  const remain = {};
-  for(const id of Object.keys(active.circuits || {})){
-    const c = active.circuits[id];
-    if(!isCompleted(c)) remain[id] = c;
+  /** ===== helpers ===== */
+  function toast(msg){
+    const t=$("toast");
+    t.textContent=msg;
+    t.style.display="block";
+    clearTimeout(toast._t);
+    toast._t=setTimeout(()=>t.style.display="none",1400);
   }
-  active = {circuits: remain};
-  saveJSON(ACTIVE_KEY, active);
-
-  // clear ALL monthly caches (logs/events/work) - because already in Sheets
-  Object.keys(localStorage).forEach(k=>{
-    if(k.startsWith(MONTHLY_PREFIX)) localStorage.removeItem(k);
-  });
-
-  localStorage.setItem(ACTIVE_MONTH_KEY, newYM);
-}
-
-/** ======================
- * LOG / EVENT / WORK STATUS (MONTHLY)
- * ======================= */
-function addMonthlyLog(row){
-  // row object => normalized later for API
-  const m = getMonthly(currentYM);
-  m.logs.push(row);
-  m.dirty = true;
-  setMonthly(currentYM, m);
-}
-
-function addMonthlyEvent(ev){
-  const m = getMonthly(currentYM);
-  m.events.push(ev);
-  m.dirty = true;
-  setMonthly(currentYM, m);
-}
-
-function removeMonthlyEvent(eventId){
-  const m = getMonthly(currentYM);
-  const idx = m.events.findIndex(x=>x.eventId===eventId);
-  if(idx>=0){
-    m.events.splice(idx,1);
-    m.dirty = true;
-    setMonthly(currentYM, m);
+  function uid(prefix="X"){ return prefix + Math.random().toString(16).slice(2) + Date.now().toString(16); }
+  function isoDate(d){
+    const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
   }
-}
-
-function rebuildWorkStatus(){
-  // Work_Status เดือนนี้ = snapshot ของ active circuits + (ถ้าเสร็จแล้วในเดือนนี้ก็ยังโชว์ได้ แต่นโยบายเราคือ active เท่านั้น)
-  const rows = Object.values(active.circuits || {}).map(c=>{
-    const pct = percentOf(c);
-    const nxt = nextStepIndex(c);
-    return {
-      ym: currentYM,
-      user: session.user,
-      cid: c.cid,
-      type: c.type,
-      sof: c.sof,
-      name: c.name,
-      progressPercent: pct,
-      lastUpdateAt: `${c.lastUpdateDate||todayStr()} ${c.lastUpdateTime||nowTime()}`,
-      nextStepNo: (nxt===null? "" : (nxt+1)),
-      nextStepName: (nxt===null? "DONE" : STEPS[nxt]),
-      installDate: c.installDate || "",
-      remark: (c.remark||"").trim(),
-      m: (c.m||"").trim()
-    };
-  });
-
-  const m = getMonthly(currentYM);
-  m.workStatus = rows;
-  m.dirty = true;
-  setMonthly(currentYM, m);
-}
-
-/** ======================
- * UI NAV
- * ======================= */
-const tabs = [...document.querySelectorAll(".tab[data-tab]")];
-function switchTab(name){
-  tabs.forEach(b=>b.classList.toggle("active", b.dataset.tab===name));
-  $("tab-dashboard").style.display = name==="dashboard" ? "" : "none";
-  $("tab-detail").style.display    = name==="detail" ? "" : "none";
-  $("tab-events").style.display    = name==="events" ? "" : "none";
-  $("rightTitle").textContent = name==="dashboard" ? "Dashboard" : name==="detail" ? "Circuit Detail" : "Events";
-  renderAll();
-}
-tabs.forEach(b=>b.addEventListener("click", ()=>switchTab(b.dataset.tab)));
-$("btnGoDashboard").addEventListener("click", ()=>switchTab("dashboard"));
-$("btnGoDetail").addEventListener("click", ()=>switchTab("detail"));
-$("btnGoEvents").addEventListener("click", ()=>switchTab("events"));
-
-/** ======================
- * CIRCUIT CRUD
- * ======================= */
-let selectedId = null;
-
-$("btnToggleAdd").addEventListener("click", ()=>{
-  const p=$("addPanel");
-  p.style.display = (p.style.display==="none") ? "" : "none";
-});
-
-$("addCid").addEventListener("input", ()=>{
-  const t=inferTypeFromCID($("addCid").value);
-  $("addHint").textContent = (t==="INVALID") ? "CID ต้องขึ้นต้น C หรือ P" : `Type (auto): ${t}`;
-});
-
-$("btnAddCircuit").addEventListener("click", ()=>{
-  const sof=($("addSof").value||"").trim();
-  const cid=($("addCid").value||"").trim();
-  const name=($("addName").value||"").trim();
-  const m=($("addM").value||"").trim();
-  if(!sof||!cid||!name){ toast("กรอก SOF, CID, ชื่อ ให้ครบ"); return; }
-  const type=inferTypeFromCID(cid);
-  if(type==="INVALID"){ toast("CID ต้องขึ้นต้น C หรือ P"); return; }
-
-  const id=uid("C");
-  const c={
-    id, sof, cid, name, type, m,
-    createdAt: todayStr(),
-    lastUpdateDate: todayStr(),
-    lastUpdateTime: nowTime(),
-    remark:"",
-    installDate:"",
-    installNote:"",
-    stepsDone:{}
-  };
-  active.circuits[id]=c;
-  saveJSON(ACTIVE_KEY, active);
-  selectedId = id;
-
-  addMonthlyLog(makeLog("CIRCUIT_CREATE", c, {detail:"สร้างวงจรใหม่"}));
-  rebuildWorkStatus();
-
-  $("addSof").value=""; $("addCid").value=""; $("addName").value=""; $("addM").value="";
-  $("addPanel").style.display="none";
-  toast("เพิ่มวงจรแล้ว");
-  switchTab("detail");
-});
-
-$("search").addEventListener("input", renderCircuitList);
-$("filterType").addEventListener("change", renderCircuitList);
-$("sortMode").addEventListener("change", renderCircuitList);
-
-function makeLog(action, c, extra={}){
-  const nxt = nextStepIndex(c);
-  return {
-    ym: currentYM,
-    doneAt: doneAtStr(),
-    user: session.user,
-    sof: c?.sof || "",
-    cid: c?.cid || "",
-    type: c?.type || "",
-    action,
-    stepNo: extra.stepNo ?? "",
-    stepName: extra.stepName ?? "",
-    detail: extra.detail ?? "",
-    remarkSnapshot: (c?.remark || "").trim(),
-    mSnapshot: (c?.m || "").trim(),
-    blockerTag: extra.blockerTag ?? "",
-    logId: extra.logId ?? uid("L")
-  };
-}
-
-/** ======================
- * DETAIL ACTIONS
- * ======================= */
-$("btnToggleMeta").addEventListener("click", ()=>{
-  const p=$("metaPanel");
-  p.style.display = (p.style.display==="none") ? "" : "none";
-});
-$("btnCloseMeta").addEventListener("click", ()=> $("metaPanel").style.display="none");
-
-$("btnSaveMeta").addEventListener("click", ()=>{
-  const c=getSelected();
-  if(!c) return;
-  const sof=($("editSof").value||"").trim();
-  const cid=($("editCid").value||"").trim();
-  const name=($("editName").value||"").trim();
-  const m=($("editM").value||"").trim();
-  if(!sof||!cid||!name){ toast("กรอก SOF, CID, ชื่อ ให้ครบ"); return; }
-  const type=inferTypeFromCID(cid);
-  if(type==="INVALID"){ toast("CID ต้องขึ้นต้น C หรือ P"); return; }
-
-  c.sof=sof; c.cid=cid; c.name=name; c.type=type; c.m=m;
-  touchUpdate(c);
-  saveJSON(ACTIVE_KEY, active);
-
-  addMonthlyLog(makeLog("CIRCUIT_EDIT", c, {detail:"แก้ SOF/CID/ชื่อ/M"}));
-  rebuildWorkStatus();
-
-  $("metaPanel").style.display="none";
-  toast("บันทึกแล้ว");
-  renderAll();
-});
-
-$("btnToggleInstall").addEventListener("click", ()=>{
-  const p=$("installPanel");
-  p.style.display = (p.style.display==="none") ? "" : "none";
-});
-
-$("btnSaveInstall").addEventListener("click", ()=>{
-  const c=getSelected(); if(!c) return;
-  c.installDate = $("installDate").value || "";
-  c.installNote = ($("installNote").value||"").trim();
-  touchUpdate(c);
-  saveJSON(ACTIVE_KEY, active);
-
-  addMonthlyLog(makeLog("INSTALL_SET", c, {detail:`install=${c.installDate}${c.installNote?` (${c.installNote})`:``}`}));
-  rebuildWorkStatus();
-
-  $("installPanel").style.display="none";
-  toast("บันทึกแล้ว");
-  renderAll();
-});
-
-$("btnClearInstall").addEventListener("click", ()=>{
-  const c=getSelected(); if(!c) return;
-  const prev = c.installDate || "";
-  c.installDate=""; c.installNote="";
-  touchUpdate(c);
-  saveJSON(ACTIVE_KEY, active);
-
-  addMonthlyLog(makeLog("INSTALL_CLEAR", c, {detail:`ลบ install เดิม=${prev}`}));
-  rebuildWorkStatus();
-
-  $("installPanel").style.display="none";
-  toast("ลบแล้ว");
-  renderAll();
-});
-
-$("btnSaveRemark").addEventListener("click", ()=>{
-  const c=getSelected(); if(!c) return;
-  c.remark = ($("remark").value||"").trim();
-  touchUpdate(c);
-  saveJSON(ACTIVE_KEY, active);
-
-  addMonthlyLog(makeLog("REMARK_UPDATE", c, {detail:"อัปเดต remark"}));
-  rebuildWorkStatus();
-
-  toast("บันทึกแล้ว");
-  renderAll();
-});
-
-$("btnArchiveDone").addEventListener("click", ()=>{
-  const c=getSelected(); if(!c) return;
-
-  // ถ้ายังไม่ติ๊ก step 21 ให้ถามก่อน
-  if(!isStepDone(c, STEP_DONE_IDX)){
-    const ok = confirm("ยังไม่ได้ติ๊ก Step 21 (ปิด CR) — จะ Archive เลยไหม?");
-    if(!ok) return;
+  function today(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+  function todayStr(){ return isoDate(today()); }
+  function nowTime(){
+    const d=new Date(), hh=String(d.getHours()).padStart(2,"0"), mi=String(d.getMinutes()).padStart(2,"0"), ss=String(d.getSeconds()).padStart(2,"0");
+    return `${hh}:${mi}:${ss}`;
   }
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+  function inferTypeFromCID(cid){
+    const c=(cid||"").trim().toUpperCase();
+    if(c.startsWith("C")) return "DIA";
+    if(c.startsWith("P")) return "DPLC";
+    return "INVALID";
+  }
+  function ensureLogDate(date){ if(!state.logs[date]) state.logs[date]=[]; }
+  function touchUpdate(c){ c.lastUpdateDate=todayStr(); c.lastUpdateTime=nowTime(); c.updatedAt=Date.now(); }
+  function lastUpdateStamp(c){ return `${c.lastUpdateDate||"-"} ${c.lastUpdateTime||"-"}`; }
 
-  // ลบออกจาก active (เพราะเสร็จแล้ว)
-  delete active.circuits[c.id];
-  saveJSON(ACTIVE_KEY, active);
-
-  addMonthlyLog(makeLog("CIRCUIT_ARCHIVE", c, {detail:"ย้ายออกจาก Active"}));
-  rebuildWorkStatus();
-
-  selectedId=null;
-  toast("Archive แล้ว (หายจาก Active)");
-  switchTab("dashboard");
-});
-
-/** ======================
- * STEPS
- * ======================= */
-function toggleStep(c, idx, checked){
-  if(!c.stepsDone) c.stepsDone = {};
-  if(!c.stepsDone[idx]) c.stepsDone[idx] = {done:false, date:""};
-  c.stepsDone[idx].done = checked;
-  c.stepsDone[idx].date = checked ? todayStr() : "";
-
-  touchUpdate(c);
-  saveJSON(ACTIVE_KEY, active);
-
-  const stepNo = idx+1;
-  const stepName = STEPS[idx];
-  const detail = `${stepNo}. ${stepName}`;
-
-  addMonthlyLog(makeLog(checked ? "STEP_CHECK" : "STEP_UNCHECK", c, {
-    stepNo, stepName, detail
-  }));
-
-  // ถ้าติ๊ก Step 21 ถือว่าเสร็จ (แต่ยังไม่ auto archive — ให้พี่กด Archive เองหรือจะปล่อยไว้ก็ได้)
-  rebuildWorkStatus();
-
-  toast(checked ? "ติ๊กแล้ว" : "ยกเลิกติ๊กแล้ว");
-  renderAll();
-}
-
-/** ======================
- * EVENTS
- * ======================= */
-$("evDate").value = todayStr();
-
-$("btnAddEvent").addEventListener("click", ()=>{
-  const date = $("evDate").value || todayStr();
-  const slot = $("evSlot").value;
-  const title = ($("evTitle").value||"").trim();
-  const note = ($("evNote").value||"").trim();
-  if(!title){ toast("ใส่ Title"); return; }
-
-  const ev = { ym: currentYM, date, user: session.user, slot, title, note, eventId: uid("E") };
-  addMonthlyEvent(ev);
-
-  // log ด้วยเพื่อ trace
-  addMonthlyLog({
-    ym: currentYM,
-    doneAt: doneAtStr(),
-    user: session.user,
-    sof:"", cid:"", type:"",
-    action:"EVENT_ADD",
-    stepNo:"", stepName:"",
-    detail:`${date} ${slot} ${title}${note?` (${note})`:``}`,
-    remarkSnapshot:"", mSnapshot:"",
-    blockerTag:"",
-    logId: uid("L")
-  });
-
-  $("evTitle").value=""; $("evNote").value="";
-  toast("เพิ่ม event แล้ว");
-  renderAll();
-});
-
-function deleteEvent(eventId){
-  const m = getMonthly(currentYM);
-  const ev = m.events.find(x=>x.eventId===eventId);
-  if(!ev) return;
-
-  removeMonthlyEvent(eventId);
-
-  addMonthlyLog({
-    ym: currentYM,
-    doneAt: doneAtStr(),
-    user: session.user,
-    sof:"", cid:"", type:"",
-    action:"EVENT_REMOVE",
-    stepNo:"", stepName:"",
-    detail:`${ev.date} ${ev.slot} ${ev.title}`,
-    remarkSnapshot:"", mSnapshot:"",
-    blockerTag:"",
-    logId: uid("L")
-  });
-
-  toast("ลบ event แล้ว");
-  renderAll();
-}
-
-/** ======================
- * RENDER
- * ======================= */
-function getSelected(){
-  return selectedId ? active.circuits[selectedId] : null;
-}
-
-function renderKpi(){
-  const list = Object.values(active.circuits || {});
-  const total = list.length;
-  const dia = list.filter(c=>c.type==="DIA").length;
-  const dplc = list.filter(c=>c.type==="DPLC").length;
-  const avg = total ? Math.round(list.reduce((a,c)=>a+percentOf(c),0)/total) : 0;
-  const stuck = list.filter(c=>(c.remark||"").trim().length>0 && !isCompleted(c)).length;
-
-  $("kpi").innerHTML = `
-    <div class="box"><div class="n">${total}</div><div class="t">Active ทั้งหมด</div></div>
-    <div class="box"><div class="n">${dia}</div><div class="t">DIA</div></div>
-    <div class="box"><div class="n">${dplc}</div><div class="t">DPLC</div></div>
-    <div class="box"><div class="n">${avg}%</div><div class="t">Avg progress</div></div>
-    <div class="box"><div class="n">${stuck}</div><div class="t">มี Remark/ติด</div></div>
-  `;
-}
-
-function renderCircuitList(){
-  const q = ($("search").value||"").toLowerCase().trim();
-  const ft = $("filterType").value;
-
-  let list = Object.values(active.circuits || {});
-  if(ft!=="ALL") list = list.filter(c=>c.type===ft);
-  if(q) list = list.filter(c=>[c.sof,c.cid,c.name,c.m].some(v=>(v||"").toLowerCase().includes(q)));
-
-  const mode = $("sortMode").value;
-  list.sort((a,b)=>{
-    if(mode==="lastUpdate") return (b.lastUpdateDate||"").localeCompare(a.lastUpdateDate||"") || (b.lastUpdateTime||"").localeCompare(a.lastUpdateTime||"");
-    if(mode==="percent") return percentOf(b)-percentOf(a);
-    if(mode==="name") return (a.name||"").localeCompare(b.name||"");
-    if(mode==="created") return (a.createdAt||"").localeCompare(b.createdAt||"");
-    return 0;
-  });
-
-  $("circuitList").innerHTML = list.map(c=>{
-    const pct = percentOf(c);
-    const nxt = nextStepIndex(c);
-    const nxtText = (nxt===null) ? "DONE" : `${nxt+1}. ${STEPS[nxt]}`;
-    const remark = (c.remark||"").trim();
-    const m = (c.m||"").trim();
-    const activeCls = (selectedId===c.id) ? "active" : "";
-
-    return `
-      <div class="item ${activeCls}" data-id="${c.id}">
-        <div class="title">${escapeHtml(c.name)}</div>
-        <div class="meta">
-          <span class="pill">${c.type}</span>
-          <span class="pill">SOF: <span class="mono">${escapeHtml(c.sof)}</span></span>
-          <span class="pill">CID: <span class="mono">${escapeHtml(c.cid)}</span></span>
-          ${m?`<span class="pill">M: <span class="mono">${escapeHtml(m)}</span></span>`:""}
-        </div>
-        <div style="margin-top:8px;" class="bar"><div style="width:${pct}%"></div></div>
-        <div class="muted small" style="margin-top:8px;">
-          <b class="mono">${pct}%</b> • Next: ${escapeHtml(nxtText)}
-          <div class="muted small">Install: <span class="mono">${escapeHtml(c.installDate||"-")}</span></div>
-          ${remark?`<div class="muted small"><span style="color:var(--warn);font-weight:900;">Remark:</span> ${escapeHtml(remark)}</div>`:""}
-          <div class="muted small">Last: <span class="mono">${escapeHtml(lastUpdateStamp(c))}</span></div>
-        </div>
-      </div>
-    `;
-  }).join("") || `<div class="muted">ยังไม่มีงานค้าง</div>`;
-
-  $("circuitList").querySelectorAll(".item").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      selectedId = el.dataset.id;
-      switchTab("detail");
+  function addLogCircuit(c, action, detail){
+    const d=todayStr(), t=nowTime();
+    ensureLogDate(d);
+    state.logs[d].push({
+      time:t, circuitId:c.id, sof:c.sof, cid:c.cid, type:c.type,
+      action, detail,
+      remarkSnapshot:(c.remark||"").trim(),
+      mSnapshot:(c.m||"").trim(),
+      actor
     });
+  }
+  function addLogSystem(action, detail){
+    const d=todayStr(), t=nowTime();
+    ensureLogDate(d);
+    state.logs[d].push({
+      time:t, circuitId:"", sof:"", cid:"", type:"",
+      action, detail, remarkSnapshot:"", mSnapshot:"", actor
+    });
+  }
+
+  function isStepDone(c, idx){ return !!(c.stepsDone && c.stepsDone[idx] && c.stepsDone[idx].done); }
+  function percentOf(c){
+    const doneCount = STEPS.reduce((a,_,i)=>a+(isStepDone(c,i)?1:0),0);
+    return Math.round((doneCount/STEPS.length)*100);
+  }
+  function nextStepIndex(c){
+    for(let i=0;i<STEPS.length;i++) if(!isStepDone(c,i)) return i;
+    return null;
+  }
+  function getSelected(){ return state.selectedId ? state.circuits[state.selectedId] : null; }
+
+  /** ✅ งานเสร็จแล้ว “ย้ายออกจากเว็บ” */
+  function archiveIfDone(c){
+    const doneAll = STEPS.every((_, i) => isStepDone(c, i));
+    if(!doneAll) return false;
+
+    if(!state.doneCircuits) state.doneCircuits = {};
+    state.doneCircuits[c.id] = {
+      ...c,
+      doneAt: `${todayStr()} ${nowTime()}`,
+      archivedAt: Date.now()
+    };
+
+    delete state.circuits[c.id];
+
+    if(state.selectedId === c.id) state.selectedId = null;
+
+    addLogSystem("CIRCUIT_ARCHIVE", `DONE → archived: ${c.cid} ${c.name}`);
+    return true;
+  }
+
+  /** ===== dirty flag (per user) ===== */
+  function isDirty(){ return localStorage.getItem(DIRTY_KEY)==="1"; }
+  function setDirty(v){
+    if(v) localStorage.setItem(DIRTY_KEY,"1");
+    else localStorage.removeItem(DIRTY_KEY);
+    $("dirtyPill").textContent = "dirty: " + (isDirty() ? "YES" : "no");
+    $("dirtyPill").classList.toggle("warn", isDirty());
+  }
+
+  /** ===== Personal event rules ===== */
+  function eventsOn(dateStr){ return (state.events||[]).filter(e=>e.date===dateStr); }
+  function hasAllDay(dateStr){ return eventsOn(dateStr).some(e=>e.slot==="ALL"); }
+  function hasSlot(dateStr, slot){ return eventsOn(dateStr).some(e=>e.slot===slot); }
+  function canAddEvent(dateStr, slot){
+    if(hasAllDay(dateStr)) return false;
+    if(slot==="ALL") return eventsOn(dateStr).length===0;
+    return !hasSlot(dateStr, slot);
+  }
+  function isInstallBlocked(dateStr){ return hasAllDay(dateStr); }
+
+  /** ===== Sync to Apps Script ===== */
+  function ymNow(){ return new Date().toISOString().slice(0,7); }
+
+  function buildPayload(){
+    const circuits = Object.values(state.circuits||{})
+      .slice()
+      .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))
+      .map(c=>{
+        const pct = percentOf(c);
+        const nxt = nextStepIndex(c);
+        const nxtText = nxt===null ? "DONE" : `${nxt+1}. ${STEPS[nxt]}`;
+        return [
+          c.name||"", c.sof||"", c.cid||"", c.type||"",
+          (c.m||""), (c.installDate||""), (c.installNote||""),
+          pct, lastUpdateStamp(c), (c.remark||""), nxtText
+        ];
+      });
+
+    const logs = [];
+    Object.keys(state.logs||{}).sort().forEach(d=>{
+      (state.logs[d]||[]).forEach(l=>{
+        logs.push([d, l.time, l.actor||"", l.sof||"", l.cid||"", l.type||"", l.action||"", l.detail||"", l.remarkSnapshot||"", l.mSnapshot||""]);
+      });
+    });
+
+    const events = (state.events||[])
+      .slice()
+      .sort((a,b)=>(a.date||"").localeCompare(b.date||"") || (a.slot||"").localeCompare(b.slot||""))
+      .map(e=>[e.date,e.slot,e.title||"",e.note||""]);
+
+    return {
+      actor,
+      version: "tracker-v3",
+      circuits, logs, events
+    };
+  }
+
+  async function sendToScript({force=false}={}){
+    if(!force && !isDirty()){
+      $("syncStatus").textContent = "Skip: not dirty";
+      return;
+    }
+
+    const ym = ymNow();
+    const payload = buildPayload();
+    const packet = { user: sess.user, pass: sess.pass, ym, data: payload };
+
+    $("syncStatus").textContent = "Sending...";
+    try{
+      await fetch(API_URL, {
+        method:"POST",
+        mode:"no-cors",
+        headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+        body: new URLSearchParams({ payload: JSON.stringify(packet) })
+      });
+      setDirty(false);
+      $("syncStatus").textContent = `Sent ✅ (${ym}) — check Drive folder`;
+      toast("ส่งข้อมูลขึ้น Drive แล้ว");
+    }catch(e){
+      $("syncStatus").textContent = "Sync failed: " + (e.message || e);
+      toast("Sync ไม่สำเร็จ");
+    }
+  }
+
+  function startAutoSync(){
+    setInterval(async ()=>{
+      try{
+        if(!isDirty()) return;
+        await sendToScript({force:false});
+      }catch(_){}
+    }, AUTO_SYNC_MINUTES*60*1000);
+  }
+
+  /** ===== UI: tabs ===== */
+  const tabsRight=[...document.querySelectorAll(".tab[data-rtab]")];
+  const rDash=$("rtab-dashboard"), rDetail=$("rtab-detail"), rDaily=$("rtab-daily"), rCal=$("rtab-calendar");
+  function switchRightTab(name){
+    tabsRight.forEach(x=>x.classList.toggle("active", x.dataset.rtab===name));
+    rDash.style.display = name==="dashboard" ? "" : "none";
+    rDetail.style.display = name==="detail" ? "" : "none";
+    rDaily.style.display = name==="daily" ? "" : "none";
+    rCal.style.display = name==="calendar" ? "" : "none";
+    $("rightTitle").textContent = name==="dashboard" ? "Dashboard" : name==="detail" ? "Circuit Detail" : name==="daily" ? "Daily Log" : "Calendar";
+    renderAll(true);
+  }
+
+  /** ===== init static UI ===== */
+  $("todayPill").textContent = `วันนี้: ${todayStr()}`;
+  $("logDate").value = todayStr();
+  const dows = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  $("calDowRow").innerHTML = dows.map(d=>`<div class="calDow">${d}</div>`).join("");
+
+  /** ===== events bindings ===== */
+  tabsRight.forEach(b=> b.addEventListener("click", ()=> switchRightTab(b.dataset.rtab)));
+  $("btnGoDashboard").addEventListener("click", ()=> switchRightTab("dashboard"));
+
+  $("search").addEventListener("input", renderCircuitList);
+  $("filterType").addEventListener("change", renderCircuitList);
+  $("sortMode").addEventListener("change", renderCircuitList);
+
+  $("btnToggleAdd").addEventListener("click", ()=>{
+    const p=$("addPanel");
+    p.style.display = (p.style.display==="none") ? "" : "none";
   });
-}
 
-function renderDashboard(){
-  const m = getMonthly(currentYM);
-  const logs = (m.logs || []).slice().reverse().slice(0,120);
+  $("addCid").addEventListener("input", ()=>{
+    const t=inferTypeFromCID($("addCid").value);
+    $("addHint").textContent = t==="INVALID" ? "CID ต้องขึ้นต้น C หรือ P" : `Type (auto): ${t}`;
+  });
 
-  $("logTable").innerHTML = logs.map(l=>{
-    return `
-      <tr>
-        <td class="mono">${escapeHtml(l.doneAt||"")}</td>
-        <td class="mono">${escapeHtml(l.cid||"")}</td>
-        <td class="mono">${escapeHtml(l.action||"")}</td>
-        <td class="mono">${l.stepNo?escapeHtml(String(l.stepNo)):""} ${l.stepName?escapeHtml(l.stepName):""}</td>
-        <td>${escapeHtml(l.detail||"")}</td>
-      </tr>
+  $("btnAddCircuit").addEventListener("click", ()=>{
+    const sof=($("addSof").value||"").trim();
+    const cid=($("addCid").value||"").trim();
+    const name=($("addName").value||"").trim();
+    const m=($("addM").value||"").trim();
+    if(!sof||!cid||!name){ toast("กรอก SOF, CID, ชื่อ ให้ครบ"); return; }
+    const type=inferTypeFromCID(cid);
+    if(type==="INVALID"){ toast("CID ต้องขึ้นต้น C หรือ P"); return; }
+
+    const id=uid("C");
+    const c={
+      id, sof, cid, name, type, m,
+      remark:"",
+      createdAt: todayStr(),
+      lastUpdateDate: todayStr(),
+      lastUpdateTime: nowTime(),
+      stepsDone:{},
+      installDate:"",
+      installNote:"",
+      updatedAt: Date.now()
+    };
+    state.circuits[id]=c;
+    state.selectedId=id;
+    addLogCircuit(c,"CIRCUIT_CREATE","สร้างวงจรใหม่");
+    save(true);
+
+    $("addSof").value=""; $("addCid").value=""; $("addName").value=""; $("addM").value="";
+    $("addPanel").style.display="none";
+    $("addHint").textContent = `เพิ่มแล้ว: ${c.type} • ${c.cid} • ${c.name}`;
+    toast("เพิ่มวงจรแล้ว");
+    switchRightTab("detail");
+  });
+
+  // detail panels
+  $("btnToggleMeta").addEventListener("click", ()=>{
+    const p=$("metaPanel");
+    p.style.display = (p.style.display==="none") ? "" : "none";
+  });
+  $("btnCloseMeta").addEventListener("click", ()=> $("metaPanel").style.display="none");
+
+  $("btnToggleInstall").addEventListener("click", ()=>{
+    const p=$("installPanel");
+    p.style.display = (p.style.display==="none") ? "" : "none";
+  });
+
+  $("btnSaveMeta").addEventListener("click", ()=>{
+    const c=getSelected(); if(!c) return;
+    const sof=($("editSof").value||"").trim();
+    const cid=($("editCid").value||"").trim();
+    const name=($("editName").value||"").trim();
+    const m=($("editM").value||"").trim();
+    if(!sof||!cid||!name){ toast("กรอก SOF, CID, ชื่อ ให้ครบ"); return; }
+    const type=inferTypeFromCID(cid);
+    if(type==="INVALID"){ toast("CID ต้องขึ้นต้น C หรือ P"); return; }
+
+    c.sof=sof; c.cid=cid; c.name=name; c.type=type; c.m=m;
+    touchUpdate(c);
+    addLogCircuit(c,"CIRCUIT_EDIT","แก้ SOF/CID/ชื่อ/M");
+    save(true);
+    toast("บันทึกแล้ว");
+    $("metaPanel").style.display="none";
+    renderAll(true);
+  });
+
+  $("btnSaveInstall").addEventListener("click", ()=>{
+    const c=getSelected(); if(!c) return;
+    const d = $("installDate").value || "";
+    const note = ($("installNote").value||"").trim();
+
+    if(d && isInstallBlocked(d)){
+      toast("วันนั้นเป็น Full day event อยู่ เลือกวันอื่น");
+      return;
+    }
+
+    const prev = c.installDate || "";
+    c.installDate = d;
+    c.installNote = note;
+
+    touchUpdate(c);
+    if(!prev && d) addLogCircuit(c,"INSTALL_SET",`ตั้งวันติดตั้ง ${d}${note?` (${note})`:``}`);
+    else if(prev && d && prev!==d) addLogCircuit(c,"INSTALL_CHANGE",`เลื่อนวันติดตั้ง ${prev} → ${d}${note?` (${note})`:``}`);
+    else if(prev && !d) addLogCircuit(c,"INSTALL_CLEAR",`ลบวันติดตั้ง (เดิม ${prev})`);
+    else addLogCircuit(c,"INSTALL_UPDATE_NOTE",`อัปเดต note วันติดตั้ง ${d || "(none)"}`);
+
+    save(true);
+    toast("บันทึกแล้ว");
+    $("installPanel").style.display="none";
+    renderAll(true);
+  });
+
+  $("btnClearInstall").addEventListener("click", ()=>{
+    const c=getSelected(); if(!c) return;
+    if(!c.installDate){ toast("ยังไม่มีวันติดตั้ง"); return; }
+    const prev=c.installDate;
+    c.installDate=""; c.installNote="";
+    touchUpdate(c);
+    addLogCircuit(c,"INSTALL_CLEAR",`ลบวันติดตั้ง (เดิม ${prev})`);
+    save(true);
+    toast("ลบแล้ว");
+    $("installPanel").style.display="none";
+    renderAll(true);
+  });
+
+  $("btnSaveRemark").addEventListener("click", ()=>{
+    const c=getSelected(); if(!c) return;
+    c.remark = ($("remark").value||"").trim();
+    touchUpdate(c);
+    addLogCircuit(c,"REMARK_UPDATE","อัปเดต Remark");
+    save(true);
+    toast("บันทึก Remark แล้ว");
+    renderAll(true);
+  });
+
+  $("btnDelete").addEventListener("click", ()=>{
+    const c=getSelected(); if(!c) return;
+    if(!confirm(`ลบวงจรนี้?\nSOF:${c.sof}\nCID:${c.cid}\nชื่อ:${c.name}`)) return;
+    addLogCircuit(c,"CIRCUIT_DELETE","ลบวงจร");
+    delete state.circuits[c.id];
+    state.selectedId=null;
+    save(true);
+    toast("ลบแล้ว");
+    switchRightTab("dashboard");
+  });
+
+  // Daily
+  $("logDate").addEventListener("change", renderDaily);
+  $("logCircuit").addEventListener("change", renderDaily);
+
+  // calendar navigation
+  let calView = new Date(); calView.setDate(1);
+  $("calPrev").addEventListener("click", ()=>{ calView.setMonth(calView.getMonth()-1); calView.setDate(1); renderCalendar(); });
+  $("calNext").addEventListener("click", ()=>{ calView.setMonth(calView.getMonth()+1); calView.setDate(1); renderCalendar(); });
+  $("calToday").addEventListener("click", ()=>{ calView=new Date(); calView.setDate(1); renderCalendar(); });
+  $("calFilter").addEventListener("change", renderCalendar);
+
+  // modal controls
+  const modalBack = $("dayModalBack");
+  $("dayModalClose").addEventListener("click", closeDayModal);
+  modalBack.addEventListener("click", (e)=>{ if(e.target===modalBack) closeDayModal(); });
+  let modalDay = null;
+
+  $("dayAddInstallBtn").addEventListener("click", ()=>{
+    if(!modalDay) return;
+    if(isInstallBlocked(modalDay)){
+      toast("วันนี้เป็น Full day event อยู่ เพิ่ม Install ไม่ได้");
+      return;
+    }
+    const circuitId = $("dayInstallCircuit").value;
+    const note = ($("dayInstallNote").value||"").trim();
+    const c = state.circuits[circuitId];
+    if(!c){ toast("เลือกวงจร"); return; }
+
+    if(c.installDate && c.installDate !== modalDay){
+      const ok = confirm(`วงจรนี้มีวันติดตั้งอยู่แล้ว: ${c.installDate}\nต้องการย้ายไป: ${modalDay} ?`);
+      if(!ok) return;
+    }
+
+    const prev = c.installDate || "";
+    c.installDate = modalDay;
+    c.installNote = note;
+
+    touchUpdate(c);
+    if(!prev) addLogCircuit(c,"INSTALL_SET",`ตั้งวันติดตั้ง ${modalDay}${note?` (${note})`:``}`);
+    else if(prev !== modalDay) addLogCircuit(c,"INSTALL_CHANGE",`เลื่อนวันติดตั้ง ${prev} → ${modalDay}${note?` (${note})`:``}`);
+    else addLogCircuit(c,"INSTALL_UPDATE_NOTE",`อัปเดต note วันติดตั้ง ${modalDay}${note?` (${note})`:``}`);
+
+    save(true);
+    $("dayInstallNote").value="";
+    toast("บันทึกแล้ว");
+    renderAll(true);
+    renderDayModal();
+  });
+
+  $("dayAddEventBtn").addEventListener("click", ()=>{
+    if(!modalDay) return;
+    const slot = $("dayEventSlot").value;
+    const title = ($("dayEventTitle").value||"").trim();
+    const note = ($("dayEventNote").value||"").trim();
+    if(!title){ toast("ใส่หัวข้อ"); return; }
+
+    if(!canAddEvent(modalDay, slot)){
+      toast("เพิ่มไม่ได้ (ชนกติกา: เต็มวัน/ซ้ำ slot/มีเช้า-บ่ายแล้วห้ามเต็มวัน)");
+      return;
+    }
+
+    if(slot==="ALL"){
+      const conflicts = Object.values(state.circuits).filter(c=>c.installDate===modalDay);
+      if(conflicts.length){
+        const names = conflicts.slice(0,6).map(c=>`${c.cid} ${c.name}`).join("\n");
+        const ok = confirm(`วันนี้มี Install อยู่ (${conflicts.length} วงจร)\n\n${names}${conflicts.length>6?`\n...`:``}\n\nต้องการเพิ่ม “เต็มวัน” ต่อไหม?`);
+        if(!ok) return;
+      }
+    }
+
+    const ev = { id: uid("E"), date: modalDay, slot, title, note };
+    state.events.push(ev);
+    addLogSystem("EVENT_ADD", `${modalDay} ${slot} ${title}${note?` (${note})`:``}`);
+    save(true);
+
+    $("dayEventTitle").value=""; $("dayEventNote").value="";
+    toast("เพิ่ม event แล้ว");
+    renderAll(true);
+    renderDayModal();
+  });
+
+  /** ===== Header actions ===== */
+  $("btnSync").addEventListener("click", ()=>sendToScript({force:false}));
+  $("btnForce").addEventListener("click", ()=>sendToScript({force:true}));
+  $("btnOpenDrive").addEventListener("click", ()=>{
+    window.open(`https://drive.google.com/drive/folders/${ROOT_FOLDER_ID}`, "_blank");
+  });
+
+  /** ===== render ===== */
+  function renderAll(){
+    setDirty(isDirty());
+    renderKpi();
+    renderCircuitList();
+    renderDashboard();
+    renderDetail();
+    renderDailyCircuitOptions();
+    renderDaily();
+    renderCalendar();
+  }
+
+  function renderKpi(){
+    const circuits=Object.values(state.circuits);
+    const total=circuits.length;
+    const dia=circuits.filter(c=>c.type==="DIA").length;
+    const dplc=circuits.filter(c=>c.type==="DPLC").length;
+    const avg=total?Math.round(circuits.reduce((a,c)=>a+percentOf(c),0)/total):0;
+    const hasRemark=circuits.filter(c=>(c.remark||"").trim().length>0 && percentOf(c)<100).length;
+    $("kpi").innerHTML = `
+      <div class="box"><div class="n">${total}</div><div class="t">งานค้าง (บนเว็บ)</div></div>
+      <div class="box"><div class="n">${dia}</div><div class="t">DIA</div></div>
+      <div class="box"><div class="n">${dplc}</div><div class="t">DPLC</div></div>
+      <div class="box"><div class="n">${avg}%</div><div class="t">Avg progress</div></div>
+      <div class="box"><div class="n">${hasRemark}</div><div class="t">มี Remark/ติด</div></div>
     `;
-  }).join("") || `<tr><td colspan="5" class="muted">ยังไม่มี log เดือนนี้</td></tr>`;
+  }
 
-  // work status
-  rebuildWorkStatus();
-  const ws = getMonthly(currentYM).workStatus || [];
-  $("wsTable").innerHTML = ws
-    .slice()
-    .sort((a,b)=> (b.lastUpdateAt||"").localeCompare(a.lastUpdateAt||""))
-    .map(r=>{
+  function renderCircuitList(){
+    const q = ($("search").value||"").toLowerCase().trim();
+    const ft = $("filterType").value;
+    let list = Object.values(state.circuits);
+
+    if(ft!=="ALL") list=list.filter(c=>c.type===ft);
+    if(q) list=list.filter(c=>[c.sof,c.cid,c.name,c.m].some(v=>(v||"").toLowerCase().includes(q)));
+
+    const mode=$("sortMode").value;
+    list.sort((a,b)=>{
+      if(mode==="lastUpdate") return (b.updatedAt||0)-(a.updatedAt||0);
+      if(mode==="percent") return percentOf(b)-percentOf(a);
+      if(mode==="name") return (a.name||"").localeCompare(b.name||"");
+      if(mode==="created") return (a.createdAt||"").localeCompare(b.createdAt||"");
+      return 0;
+    });
+
+    $("circuitList").innerHTML = list.map(c=>{
+      const pct=percentOf(c);
+      const nxt=nextStepIndex(c);
+      const nxtText=nxt===null?"เสร็จแล้ว":`${nxt+1}. ${STEPS[nxt]}`;
+      const remark=(c.remark||"").trim();
+      const m=(c.m||"").trim();
+      const installTxt = c.installDate ? c.installDate : "-";
+      const blocked = c.installDate && isInstallBlocked(c.installDate) ? " ⚠(Full day)" : "";
+      const active = state.selectedId===c.id ? "active" : "";
+      return `
+        <div class="item ${active}" data-id="${c.id}">
+          <div class="title">${escapeHtml(c.name)}</div>
+          <div class="meta">
+            <span class="pill">${c.type}</span>
+            <span class="pill">SOF: <span class="mono">${escapeHtml(c.sof)}</span></span>
+            <span class="pill">CID: <span class="mono">${escapeHtml(c.cid)}</span></span>
+            ${m?`<span class="pill">M: <span class="mono">${escapeHtml(m)}</span></span>`:""}
+          </div>
+          <div style="margin-top:8px;" class="bar"><div style="width:${pct}%"></div></div>
+          <div class="muted small" style="margin-top:8px;">
+            <b class="mono">${pct}%</b> • Next: ${escapeHtml(nxtText)}
+            <div class="muted small">Install: <span class="mono">${escapeHtml(installTxt)}</span>${blocked?`<span class="badTxt">${blocked}</span>`:""}</div>
+            ${remark?`<div class="muted small"><span class="warnTxt">Remark:</span> ${escapeHtml(remark)}</div>`:""}
+            <div class="muted small">Last: <span class="mono">${escapeHtml(lastUpdateStamp(c))}</span></div>
+          </div>
+        </div>
+      `;
+    }).join("") || `<div class="muted">ยังไม่มีวงจร</div>`;
+
+    $("circuitList").querySelectorAll(".item").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.selectedId = el.dataset.id;
+        save(true);
+        switchRightTab("detail");
+      });
+    });
+  }
+
+  function renderDashboard(){
+    const d=todayStr(); ensureLogDate(d);
+    const logs=(state.logs[d]||[]).slice().reverse();
+    $("todayLogTable").innerHTML = logs.map(l=>{
+      const isSys = !l.circuitId;
+      const c = l.circuitId ? state.circuits[l.circuitId] : null;
+      const name = c ? c.name : (isSys ? "SYSTEM" : "(deleted)");
+      const meta = c ? `${c.sof} • ${c.cid} • ${c.type}` : "";
       return `
         <tr>
-          <td class="mono"><b>${escapeHtml(r.cid)}</b><div class="muted small">${escapeHtml(r.type)} • ${escapeHtml(r.name||"")}</div></td>
-          <td class="mono">${escapeHtml(String(r.progressPercent||0))}%</td>
-          <td class="mono">${r.nextStepNo?escapeHtml(String(r.nextStepNo)):""} ${escapeHtml(r.nextStepName||"")}</td>
-          <td class="mono">${escapeHtml(r.installDate||"-")}</td>
-          <td>${(r.remark||"").trim()?escapeHtml(r.remark):"<span class='muted'>-</span>"}</td>
-          <td class="mono">${escapeHtml(r.lastUpdateAt||"")}</td>
+          <td class="mono">${escapeHtml(l.time)}</td>
+          <td><b>${escapeHtml(name)}</b>${meta?`<div class="muted small">${escapeHtml(meta)}</div>`:""}</td>
+          <td class="mono">${escapeHtml(l.action)}</td>
+          <td>${escapeHtml(l.detail||"")}</td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="6" class="muted">ยังไม่มี Work_Status</td></tr>`;
-}
+    }).join("") || `<tr><td colspan="4" class="muted">วันนี้ยังไม่มี log</td></tr>`;
 
-function renderDetail(){
-  const c = getSelected();
-  if(!c){
-    $("noSelected").style.display="";
-    $("detailPanel").style.display="none";
-    return;
+    const circuits=Object.values(state.circuits).slice().sort((a,b)=>percentOf(b)-percentOf(a));
+    $("overviewTable").innerHTML = circuits.slice(0,18).map(c=>{
+      const pct=percentOf(c);
+      const nxt=nextStepIndex(c);
+      const nxtText=nxt===null?"DONE":`${nxt+1}. ${STEPS[nxt]}`;
+      const remark=(c.remark||"").trim();
+      const install = c.installDate ? c.installDate : "-";
+      return `
+        <tr>
+          <td><b>${escapeHtml(c.name)}</b><div class="muted small">${escapeHtml(c.type)} • ${escapeHtml(c.cid)}${(c.m||"").trim()?` • M:${escapeHtml((c.m||"").trim())}`:""}</div></td>
+          <td class="mono">${pct}%</td>
+          <td>${escapeHtml(nxtText)}</td>
+          <td class="mono">${escapeHtml(install)}</td>
+          <td>${remark?escapeHtml(remark):"<span class='muted'>-</span>"}</td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="5" class="muted">ยังไม่มีวงจร</td></tr>`;
+
+    $("summaryTable").innerHTML = Object.values(state.circuits)
+      .slice()
+      .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))
+      .map(c=>{
+        const pct=percentOf(c);
+        const remark=(c.remark||"").trim();
+        const m=(c.m||"").trim();
+        const install=c.installDate || "";
+        return `
+          <tr>
+            <td><b>${escapeHtml(c.name)}</b></td>
+            <td class="mono">${escapeHtml(c.sof)}</td>
+            <td class="mono">${escapeHtml(c.cid)}</td>
+            <td>${escapeHtml(c.type)}</td>
+            <td class="mono">${pct}%</td>
+            <td class="mono">${escapeHtml(lastUpdateStamp(c))}</td>
+            <td class="mono">${m?escapeHtml(m):"<span class='muted'>-</span>"}</td>
+            <td class="mono">${install?escapeHtml(install):"<span class='muted'>-</span>"}</td>
+            <td>${remark?escapeHtml(remark):"<span class='muted'>-</span>"}</td>
+          </tr>
+        `;
+      }).join("") || `<tr><td colspan="9" class="muted">ยังไม่มีวงจร</td></tr>`;
   }
-  $("noSelected").style.display="none";
-  $("detailPanel").style.display="";
 
-  const pct = percentOf(c);
-  $("dType").textContent=c.type;
-  $("dPct").textContent=`${pct}%`;
-  $("dLast").textContent=lastUpdateStamp(c);
-  $("dInstall").textContent=c.installDate || "-";
-  $("dBar").style.width=`${pct}%`;
+  function renderDetail(){
+    const c=getSelected();
+    if(!c){
+      $("noSelected").style.display="";
+      $("detailPanel").style.display="none";
+      return;
+    }
+    $("noSelected").style.display="none";
+    $("detailPanel").style.display="";
 
-  $("editSof").value=c.sof||"";
-  $("editCid").value=c.cid||"";
-  $("editName").value=c.name||"";
-  $("editM").value=c.m||"";
+    const pct=percentOf(c);
+    $("dType").textContent=c.type;
+    $("dPct").textContent=`${pct}%`;
+    $("dLast").textContent=lastUpdateStamp(c);
+    $("dBar").style.width=`${pct}%`;
+    $("dInstall").textContent = c.installDate ? c.installDate : "-";
 
-  $("installDate").value = c.installDate || "";
-  $("installNote").value = c.installNote || "";
+    $("editSof").value=c.sof||"";
+    $("editCid").value=c.cid||"";
+    $("editName").value=c.name||"";
+    $("editM").value=c.m||"";
+    $("remark").value=c.remark||"";
 
-  $("remark").value = c.remark || "";
+    $("installDate").value = c.installDate || "";
+    $("installNote").value = c.installNote || "";
 
-  $("steps").innerHTML = STEPS.map((name, idx)=>{
-    const done = isStepDone(c,idx);
-    const date = done ? (c.stepsDone[idx].date||"-") : "";
-    return `
-      <div class="step">
-        <input type="checkbox" data-step="${idx}" ${done?"checked":""} />
-        <div style="flex:1;">
-          <div class="name">${idx+1}. ${escapeHtml(name)} ${idx===STEP_DONE_IDX?`<span class="pill good">DONE</span>`:""}</div>
-          <div class="muted small">${done?`ทำแล้ววันที่ <span class="mono">${escapeHtml(date)}</span>`:"ยังไม่ทำ"}</div>
+    $("editHint").textContent = `Type auto จาก CID: ${inferTypeFromCID(c.cid)}`;
+    $("installHint").textContent = c.installDate
+      ? (isInstallBlocked(c.installDate) ? "⚠ วันติดตั้งชน Full day event (ควรเลื่อน)" : "มีวันติดตั้งแล้ว (แก้ได้)")
+      : "ยังไม่มีวันติดตั้ง";
+
+    const recent=[];
+    for(const d of Object.keys(state.logs).sort().reverse()){
+      const arr=state.logs[d]||[];
+      for(let i=arr.length-1;i>=0;i--){
+        const l=arr[i];
+        if(l.circuitId===c.id){
+          recent.push({date:d,...l});
+          if(recent.length>=12) break;
+        }
+      }
+      if(recent.length>=12) break;
+    }
+    $("recentLog").innerHTML = recent.length ? recent.map(r=>{
+      return `<div>• <span class="mono">${escapeHtml(r.date)} ${escapeHtml(r.time)}</span> — <span class="mono">${escapeHtml(r.action)}</span> ${escapeHtml(r.detail||"")} <span class="muted small">(${escapeHtml(r.actor||"")})</span></div>`;
+    }).join("") : `<span class="muted">ยังไม่มี log</span>`;
+
+    $("steps").innerHTML = STEPS.map((name, idx)=>{
+      const done=isStepDone(c,idx);
+      const date=done?(c.stepsDone[idx].date||"-"):"";
+      const tag = idx===STEP_14_IDX ? `<span class="pill warn">ใช้ใน Alerts</span>` : "";
+      return `
+        <div class="step">
+          <input type="checkbox" data-step="${idx}" ${done?"checked":""} />
+          <div style="flex:1;">
+            <div class="name">${idx+1}. ${escapeHtml(name)} ${tag}</div>
+            ${done?`<div class="done">ทำแล้ววันที่: <span class="mono">${escapeHtml(date)}</span></div>`:`<div class="done muted">ยังไม่ทำ</div>`}
+          </div>
         </div>
-      </div>
-    `;
-  }).join("");
+      `;
+    }).join("");
 
-  $("steps").querySelectorAll("input[type=checkbox][data-step]").forEach(cb=>{
-    cb.addEventListener("change", ()=>{
-      const idx = Number(cb.dataset.step);
-      toggleStep(c, idx, cb.checked);
+    $("steps").querySelectorAll("input[type=checkbox][data-step]").forEach(cb=>{
+      cb.addEventListener("change", ()=>{
+        const idx=Number(cb.dataset.step);
+        toggleStep(c.id, idx, cb.checked);
+      });
     });
-  });
-}
-
-function renderEvents(){
-  const m = getMonthly(currentYM);
-  const evs = (m.events || []).slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"") || (a.slot||"").localeCompare(b.slot||""));
-  $("evTable").innerHTML = evs.map(e=>{
-    return `
-      <tr>
-        <td class="mono">${escapeHtml(e.date||"")}</td>
-        <td class="mono">${escapeHtml(e.slot||"")}</td>
-        <td><b>${escapeHtml(e.title||"")}</b></td>
-        <td>${(e.note||"").trim()?escapeHtml(e.note):"<span class='muted'>-</span>"}</td>
-        <td><button class="btn danger" data-del="${escapeHtml(e.eventId)}">Del</button></td>
-      </tr>
-    `;
-  }).join("") || `<tr><td colspan="5" class="muted">ยังไม่มี events เดือนนี้</td></tr>`;
-
-  $("evTable").querySelectorAll("button[data-del]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const id = btn.dataset.del;
-      if(!confirm("ลบ event นี้?")) return;
-      deleteEvent(id);
-    });
-  });
-}
-
-function renderAll(){
-  currentYM = ymNow();
-  renderKpi();
-  renderCircuitList();
-  renderDashboard();
-  renderDetail();
-  renderEvents();
-  updateHeaderPills();
-}
-
-/** ======================
- * SYNC (only if changed) + AUTO EVERY 60 MIN
- * ======================= */
-let isSyncing = false;
-
-function stableHash(obj){
-  // simple deterministic hash using JSON string
-  const s = JSON.stringify(obj);
-  let h = 2166136261;
-  for(let i=0;i<s.length;i++){
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
   }
-  return (h>>>0).toString(16);
-}
 
-async function syncNow(){
-  if(isSyncing) return false;
-  if(!session || !session.user || !session.pass || !APPS_SCRIPT_URL){ toast("ยังไม่ Login / ไม่มี URL"); return false; }
+  /** ✅ แก้ toggleStep: ติ๊กครบแล้ว archive หายจากเว็บ */
+  function toggleStep(id, idx, checked){
+    const c = state.circuits[id];
+    if(!c) return;
 
-  isSyncing = true;
-  try{
-    const savedYM = localStorage.getItem(ACTIVE_MONTH_KEY) || currentYM;
-    const thisYM = ymNow();
-    currentYM = thisYM;
+    if(!c.stepsDone) c.stepsDone = {};
+    if(!c.stepsDone[idx]) c.stepsDone[idx] = { done:false, date:"" };
 
-    // rebuild Work_Status before syncing
-    rebuildWorkStatus();
-    const m = getMonthly(thisYM);
+    c.stepsDone[idx].done = checked;
+    c.stepsDone[idx].date = checked ? todayStr() : "";
 
-    // only sync when dirty or hash changed
-    const payloadData = {
-      logs: (m.logs || []),
-      events: (m.events || []),
-      workStatus: (m.workStatus || [])
-    };
-    const h = stableHash(payloadData);
+    touchUpdate(c);
 
-    if(!m.dirty && m.lastHash === h){
-      toast("ไม่มีการเปลี่ยนแปลง (ไม่ต้อง sync)");
-      return true;
+    addLogCircuit(c, checked ? "STEP_CHECK" : "STEP_UNCHECK", `${idx+1}. ${STEPS[idx]}`);
+
+    let archived = false;
+    if(checked){
+      archived = archiveIfDone(c);
     }
 
-    $("pillSync").textContent = "sync: syncing...";
+    save(true);
 
-    // Apps Script expects: x-www-form-urlencoded payload=<json>
-    const body = {
-      user: session.user,
-      pass: session.pass,
-      ym: thisYM,
-      data: payloadData
-    };
-
-    const form = new URLSearchParams();
-    form.set("payload", JSON.stringify(body));
-
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method:"POST",
-      headers: { "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
-      body: form.toString()
-    });
-
-    const j = await res.json().catch(()=>null);
-    if(!res.ok || !j || !j.ok){
-      toast("Sync fail: " + (j?.error || res.status));
-      return false;
-    }
-
-    // mark synced
-    m.dirty = false;
-    m.lastHash = h;
-    m.lastSyncAt = doneAtStr();
-    setMonthly(thisYM, m);
-
-    // month changed? -> rollover after successful sync
-    if(savedYM !== thisYM){
-      rolloverToNewMonth(thisYM);
-      toast("ขึ้นเดือนใหม่อัตโนมัติ: ล้าง log เก่า (เก็บเฉพาะงานค้าง)");
+    if(archived){
+      toast("✅ งานนี้ DONE แล้ว → หายจากเว็บ (เก็บไว้ใน Sheet)");
+      switchRightTab("dashboard");
     }else{
-      toast("Sync สำเร็จ");
+      toast(checked ? "ติ๊กเพิ่ม + ลง log แล้ว" : "ยกเลิกติ๊ก + ลง log แล้ว");
     }
 
-    renderAll();
-    return true;
-
-  } catch(e){
-    toast("Sync error");
-    return false;
-  } finally{
-    isSyncing = false;
-    updateHeaderPills();
+    renderAll(true);
   }
-}
 
-$("btnSyncNow").addEventListener("click", syncNow);
-
-// auto sync every 60 minutes
-setInterval(()=>{ syncNow(); }, 60*60*1000);
-
-// also try sync on load (optional)
-window.addEventListener("focus", ()=>{ syncNow(); });
-
-/** ======================
- * INIT
- * ======================= */
-(function init(){
-  ensureActiveMonth();
-
-  // load api url if exists
-  APPS_SCRIPT_URL = localStorage.getItem("provi_api_url") || "";
-
-  // if no session -> login
-  session = loadJSON(SESSION_KEY, null);
-  active  = loadJSON(ACTIVE_KEY, {circuits:{}});
-
-  if(!session){
-    showLogin();
-    return;
+  function renderDailyCircuitOptions(){
+    const sel=$("logCircuit");
+    const list=Object.values(state.circuits).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    sel.innerHTML = `<option value="">(ทุกวงจร + system)</option>` + list.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} • ${escapeHtml(c.cid)}</option>`).join("");
   }
-  showApp();
-  renderAll();
-})();
+
+  function renderDaily(){
+    const d=$("logDate").value||todayStr();
+    ensureLogDate(d);
+    const id=$("logCircuit").value||"";
+    const logs=(state.logs[d]||[]).filter(l=>!id || l.circuitId===id).slice().reverse();
+
+    $("dailyBody").innerHTML = logs.map(l=>{
+      const c=l.circuitId ? state.circuits[l.circuitId] : null;
+      const m=c?(c.m||""):(l.mSnapshot||"");
+      return `
+        <tr>
+          <td class="mono">${escapeHtml(l.time)}</td>
+          <td class="mono">${escapeHtml(l.sof||"")}</td>
+          <td class="mono">${escapeHtml(l.cid||"")}</td>
+          <td>${escapeHtml(l.type||"")}</td>
+          <td class="mono">${escapeHtml(l.action||"")}</td>
+          <td>${escapeHtml(l.detail||"")}</td>
+          <td>${(l.remarkSnapshot||"").trim()?escapeHtml(l.remarkSnapshot):"<span class='muted'>-</span>"}</td>
+          <td>${m?`<span class="mono">${escapeHtml(m)}</span>`:"<span class='muted'>-</span>"}</td>
+          <td>${escapeHtml(l.actor||"")}</td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="9" class="muted">ไม่มี log ในวันนี้</td></tr>`;
+  }
+
+  function monthName(d){ return d.toLocaleString("en-US",{month:"long", year:"numeric"}); }
+
+  function renderCalendar(){
+    $("calTitle").textContent = monthName(calView);
+    const y=calView.getFullYear(), m=calView.getMonth();
+    const first = new Date(y,m,1); first.setHours(0,0,0,0);
+    const last = new Date(y,m+1,0); last.setHours(0,0,0,0);
+
+    const firstDow = (first.getDay()+6)%7; // Mon=0
+    const totalDays = last.getDate();
+    const cells = [];
+    for(let i=0;i<firstDow;i++){
+      const d = new Date(y,m,1-(firstDow-i));
+      cells.push({date: d, inMonth:false});
+    }
+    for(let d=1; d<=totalDays; d++) cells.push({date: new Date(y,m,d), inMonth:true});
+    while(cells.length%7!==0){
+      const d = new Date(y,m,totalDays + (cells.length - (firstDow+totalDays)) + 1);
+      cells.push({date: d, inMonth:false});
+    }
+
+    const filter = $("calFilter").value;
+
+    $("calGrid").innerHTML = cells.map(cell=>{
+      const ds = isoDate(cell.date);
+      const dim = cell.inMonth ? "" : "dim";
+      const dayNum = cell.date.getDate();
+      const todayMark = (ds===todayStr()) ? `<span class="pill good">today</span>` : "";
+
+      const evs = eventsOn(ds).slice().sort((a,b)=>a.slot.localeCompare(b.slot));
+      const allDay = evs.some(e=>e.slot==="ALL");
+
+      const eventChips = evs.slice(0,4).map(e=>{
+        const cls = e.slot==="ALL" ? "eventAll" : "event";
+        return `<div class="chip ${cls}"><span class="mono">${escapeHtml(e.slot)}</span><span>${escapeHtml(e.title)}</span></div>`;
+      });
+
+      const installs = Object.values(state.circuits)
+        .filter(c=>{
+          if(filter!=="ALL" && c.type!==filter) return false;
+          return c.installDate===ds;
+        })
+        .sort((a,b)=>(a.cid||"").localeCompare(b.cid||""))
+        .slice(0,4)
+        .map(c=>{
+          const step14 = isStepDone(c, STEP_14_IDX);
+          const cls = step14 ? "install" : "install bad";
+          const warn = step14 ? "" : `<span class="mono badTxt">⚠</span>`;
+          return `<div class="chip ${cls}">${warn}<span class="mono">${escapeHtml(c.cid)}</span><span>${escapeHtml(c.name)}</span></div>`;
+        });
+
+      const allBadge = allDay ? `<span class="pill warn">FULL</span>` : "";
+
+      return `
+        <div class="calCell ${dim}" data-day="${ds}">
+          <div class="dateRow">
+            <div class="dnum">${dayNum}</div>
+            <div class="spacer"></div>
+            ${allBadge}
+            ${todayMark}
+          </div>
+          <div class="chips">
+            ${eventChips.join("")}
+            ${installs.join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    $("calGrid").querySelectorAll(".calCell[data-day]").forEach(el=>{
+      el.addEventListener("click", ()=> openDayModal(el.dataset.day));
+    });
+  }
+
+  function openDayModal(day){
+    modalDay = day;
+    $("dayModalTitle").textContent = `📅 ${day}`;
+    $("dayModalBack").style.display="flex";
+    renderDayModal();
+  }
+  function closeDayModal(){
+    $("dayModalBack").style.display="none";
+    modalDay = null;
+  }
+
+  function renderDayModal(){
+    if(!modalDay) return;
+
+    const allDay = hasAllDay(modalDay);
+    $("dayInstallBlockHint").textContent = allDay ? "⚠ วันนี้ Full day event → เพิ่ม Install ไม่ได้" : "";
+
+    const circuits = Object.values(state.circuits).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    $("dayInstallCircuit").innerHTML = circuits.length
+      ? circuits.map(c=>`<option value="${c.id}">${escapeHtml(c.type)} • ${escapeHtml(c.cid)} • ${escapeHtml(c.name)}${c.installDate?` (มี ${c.installDate})`:``}</option>`).join("")
+      : `<option value="">(no circuits)</option>`;
+
+    $("dayAddInstallBtn").disabled = allDay || circuits.length===0;
+    $("dayInstallCircuit").disabled = allDay || circuits.length===0;
+    $("dayInstallNote").disabled = allDay || circuits.length===0;
+
+    const installs = circuits.filter(c=>c.installDate===modalDay).sort((a,b)=>(a.cid||"").localeCompare(b.cid||""));
+    $("dayInstallList").innerHTML = installs.length ? installs.map(c=>{
+      return `
+        <tr data-cid="${c.id}">
+          <td><b>${escapeHtml(c.cid)}</b><div class="muted small">${escapeHtml(c.name)}</div></td>
+          <td>${(c.installNote||"").trim()?escapeHtml(c.installNote):"<span class='muted'>-</span>"}</td>
+          <td><input type="date" data-f="move" value="${escapeHtml(modalDay)}" ${allDay?"disabled":""} /></td>
+          <td>
+            <button class="btn" data-act="move" ${allDay?"disabled":""}>Move</button>
+            <button class="btn danger" data-act="clear">Clear</button>
+          </td>
+        </tr>
+      `;
+    }).join("") : `<tr><td colspan="4" class="muted">ยังไม่มี Install ในวันนี้</td></tr>`;
+
+    $("dayInstallList").querySelectorAll("button[data-act]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const tr = btn.closest("tr");
+        const cid = tr.dataset.cid;
+        const act = btn.dataset.act;
+        const c = state.circuits[cid];
+        if(!c) return;
+
+        if(act==="clear"){
+          const prev=c.installDate;
+          c.installDate=""; c.installNote="";
+          touchUpdate(c);
+          addLogCircuit(c,"INSTALL_CLEAR",`ลบวันติดตั้ง (เดิม ${prev})`);
+          save(true);
+          toast("ลบแล้ว");
+          renderAll(true); renderDayModal();
+          return;
+        }
+
+        if(act==="move"){
+          const newDate = tr.querySelector('input[data-f="move"]').value;
+          if(!newDate){ toast("เลือกวันที่"); return; }
+          if(isInstallBlocked(newDate)){ toast("วันนั้นเป็น Full day event อยู่ เลือกวันอื่น"); return; }
+          if(newDate!==c.installDate){
+            const ok = confirm(`ต้องการย้ายวันติดตั้ง ${c.installDate} → ${newDate} ?`);
+            if(!ok) return;
+          }
+          const prev=c.installDate;
+          c.installDate=newDate;
+          touchUpdate(c);
+          addLogCircuit(c,"INSTALL_CHANGE",`เลื่อนวันติดตั้ง ${prev} → ${newDate}${(c.installNote||"").trim()?` (${c.installNote.trim()})`:``}`);
+          save(true);
+          toast("ย้ายแล้ว");
+          renderAll(true);
+          renderDayModal();
+        }
+      });
+    });
+
+    const evs = eventsOn(modalDay).slice().sort((a,b)=>a.slot.localeCompare(b.slot));
+    let ruleText = "";
+    if(hasAllDay(modalDay)) ruleText = "มี ALL แล้ว → เพิ่มเช้า/บ่ายไม่ได้ + เพิ่ม Install ไม่ได้";
+    else if(hasSlot(modalDay,"AM") && hasSlot(modalDay,"PM")) ruleText = "มีเช้า+บ่ายแล้ว → เพิ่มเต็มวันไม่ได้";
+    else ruleText = "เพิ่มได้ตามกติกา (AM/PM เพิ่มได้คนละช่วง)";
+
+    $("dayEventRuleHint").textContent = ruleText;
+
+    $("dayEventList").innerHTML = evs.length ? evs.map(e=>{
+      return `
+        <tr data-eid="${e.id}">
+          <td class="mono">${escapeHtml(e.slot)}</td>
+          <td><b>${escapeHtml(e.title)}</b></td>
+          <td>${(e.note||"").trim()?escapeHtml(e.note):"<span class='muted'>-</span>"}</td>
+          <td><button class="btn danger" data-act="del">Del</button></td>
+        </tr>
+      `;
+    }).join("") : `<tr><td colspan="4" class="muted">ยังไม่มี event</td></tr>`;
+
+    $("dayEventList").querySelectorAll("button[data-act='del']").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const tr=btn.closest("tr");
+        const eid=tr.dataset.eid;
+        const idx=state.events.findIndex(e=>e.id===eid);
+        if(idx<0) return;
+        const ev=state.events[idx];
+        state.events.splice(idx,1);
+        addLogSystem("EVENT_REMOVE", `${ev.date} ${ev.slot} ${ev.title}`);
+        save(true);
+        toast("ลบ event แล้ว");
+        renderAll(true); renderDayModal();
+      });
+    });
+  }
+
+  /** ===== startup ===== */
+  setDirty(isDirty());
+  renderAll(true);
+  switchRightTab("dashboard");
+  startAutoSync();
+});
 </script>
 </body>
 </html>
