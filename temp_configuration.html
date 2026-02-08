@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Config AR5710-S / S5335 / ISR4331 Generator</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#101826;
+      --panel2:#0f1722;
+      --line:#243449;
+      --text:#eaf2ff;
+      --muted:#8fa4be;
+
+      /* ORANGE theme */
+      --accent:#ff7a18;
+      --accent2:#ff9a3c;
+      --accent-soft: rgba(255,122,24,.12);
+
+      --ok:#37d67a;
+      --warn:#ffd089;
+
+      --radius-lg: 18px;
+      --radius-md: 12px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(1100px 520px at 10% 0%, rgba(255,122,24,.18), transparent 55%),
+        radial-gradient(900px 480px at 90% 20%, rgba(255,154,60,.10), transparent 55%),
+        linear-gradient(180deg, #0b0f14, #070a0d);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+
+    .container{
+      width:100%;
+      max-width:980px;
+      border-radius:var(--radius-lg);
+      border:1px solid rgba(36,52,73,.75);
+      background: rgba(16,24,38,.60);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 55px rgba(0,0,0,.45), 0 0 0 1px rgba(148,163,184,.10);
+      padding:22px 18px 18px;
+    }
+    @media (min-width:768px){
+      .container{padding:26px 26px 22px}
+    }
+
+    .header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .header-left{display:flex;flex-direction:column;gap:6px}
+    .title{
+      font-size:1.15rem;
+      font-weight:900;
+      letter-spacing:.02em;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .badgeP{
+      width:34px;height:34px;border-radius:12px;
+      display:grid;place-items:center;
+      font-weight:1000;
+      color:#1a0d05;
+      background: linear-gradient(180deg, var(--accent), #d85f0f);
+      box-shadow: 0 10px 30px rgba(255,122,24,.18);
+    }
+    .subtitle{font-size:.86rem;color:var(--muted);line-height:1.4}
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:.78rem;
+      background: rgba(16,24,38,.55);
+      color: var(--muted);
+      border:1px solid rgba(36,52,73,.75);
+      white-space:nowrap;
+    }
+    .pill strong{color:var(--text)}
+    .pill.orange{
+      border-color: rgba(255,122,24,.45);
+      background: rgba(255,122,24,.10);
+      color:#ffd7bf;
+    }
+
+    .section-title{
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.11em;
+      color:var(--muted);
+      margin:14px 0 6px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(255,122,24,.10);
+    }
+    .line{
+      border:none;
+      border-top:1px dashed rgba(36,52,73,.85);
+      margin:8px 0 12px;
+    }
+
+    .form-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px 18px;
+      margin-bottom:10px;
+    }
+    @media (min-width:760px){
+      .form-grid{grid-template-columns:1fr 1fr}
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .field label{
+      font-size:.82rem;
+      font-weight:700;
+      color:var(--muted);
+    }
+    .field input,.field select{
+      padding:10px 10px;
+      border-radius:var(--radius-md);
+      border:1px solid rgba(36,52,73,.90);
+      font-size:.92rem;
+      outline:none;
+      background: rgba(14,21,32,.95);
+      color:var(--text);
+      transition:border-color .15s, box-shadow .15s, background-color .15s;
+    }
+    .field input:focus,.field select:focus{
+      border-color: rgba(255,122,24,.80);
+      box-shadow: 0 0 0 3px rgba(255,122,24,.16);
+      background: rgba(14,21,32,.98);
+    }
+    .field input::placeholder{color:#6f859d}
+
+    .buttons{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:flex-end;
+      margin:10px 0 12px;
+    }
+    button{
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(36,52,73,.90);
+      font-size:.92rem;
+      font-weight:900;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition:transform .08s, box-shadow .12s, background-color .12s, color .12s, border-color .12s;
+      background: rgba(16,24,38,.55);
+      color: var(--text);
+    }
+    button:active{transform:translateY(1px);box-shadow:none}
+    .btn-primary{
+      background: linear-gradient(180deg, rgba(255,122,24,.95), rgba(216,95,15,.95));
+      border-color: rgba(255,122,24,.55);
+      color:#1a0d05;
+      box-shadow: 0 14px 30px rgba(255,122,24,.18);
+    }
+    .btn-primary:hover{filter:brightness(1.02)}
+    .btn-ghost:hover{border-color: rgba(255,122,24,.45)}
+
+    .output-wrapper{
+      background: rgba(14,21,32,.95);
+      border-radius:14px;
+      padding:12px;
+      border:1px solid rgba(36,52,73,.90);
+    }
+    .output-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+      gap:10px;
+    }
+    .output-title{
+      font-size:.80rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.10em;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .output-status{
+      font-size:.78rem;
+      color:#ffd7bf;
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,122,24,.35);
+      background: rgba(255,122,24,.10);
+      white-space:nowrap;
+    }
+    pre#output{
+      margin:0;
+      background: transparent;
+      color:#cfe3ff;
+      font-size:.80rem;
+      white-space:pre-wrap;
+      word-wrap:break-word;
+      max-height:420px;
+      overflow-y:auto;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      line-height:1.35;
+    }
+
+    .hint{
+      font-size:.82rem;
+      color:var(--muted);
+      margin-top:6px;
+      line-height:1.45;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <div class="title">
+        <div class="badgeP">P</div>
+        Config Generator
+      </div>
+      <div class="subtitle">กรอกข้อมูลวงจร แล้วระบบจะสร้าง Config ให้พร้อมใช้งาน (Huawei / Cisco)</div>
+      <div class="hint">* ปุ่ม “สร้าง Config” จะรวม <strong>PRECONFIG NODE</strong> + config เดิมให้ในผลลัพธ์</div>
+    </div>
+    <div class="pill orange"><strong>Provisioning</strong> · Jastel</div>
+  </div>
+
+  <div class="section-title"><span class="dot"></span>Device & ข้อมูลวงจร</div>
+  <hr class="line"/>
+
+  <div class="form-grid">
+    <div class="field">
+      <label for="deviceType">Device Type</label>
+      <select id="deviceType">
+        <option value="huawei-router">AR5710-S (Router)</option>
+        <option value="huawei-switch">S5335-L10T4X-A-V2 (Switch)</option>
+        <option value="cisco-4331">Cisco ISR4331 (Router)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="Cxxx">CID</label>
+      <input type="text" id="Cxxx" placeholder="เช่น C5324"/>
+    </div>
+
+    <div class="field">
+      <label for="RT_Name">RT Name / Service Name</label>
+      <input type="text" id="RT_Name" placeholder="เช่น China Mobile Getop"/>
+    </div>
+
+    <div class="field">
+      <label for="VLAN">VLAN</label>
+      <input type="text" id="VLAN" placeholder="เช่น 523"/>
+    </div>
+
+    <div class="field">
+      <label for="LOOPBACK">Loopback / Loopback Switch</label>
+      <input type="text" id="LOOPBACK" placeholder="เช่น 10.20.24.236"/>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot"></span>WAN Management</div>
+  <hr class="line"/>
+
+  <div class="form-grid">
+    <div class="field">
+      <label for="Name_main">Node MAIN (Node + Port)</label>
+      <input type="text" id="Name_main" placeholder="เช่น CX600_BPO GE0/3/6"/>
+    </div>
+
+    <div class="field">
+      <label for="Name_Protection">Node PROTEC (Node + Port)</label>
+      <input type="text" id="Name_Protection" placeholder="เช่น CX600_BMM GE0/3/8"/>
+    </div>
+
+    <div class="field">
+      <label for="WAN1_IP_NODE">WAN MGMT NODE MAIN</label>
+      <input type="text" id="WAN1_IP_NODE" placeholder="เช่น 10.100.120.10/31"/>
+    </div>
+
+    <div class="field">
+      <label for="WAN2_IP_NODE">WAN MGMT NODE PROTEC</label>
+      <input type="text" id="WAN2_IP_NODE" placeholder="เช่น 10.100.103.104/31"/>
+    </div>
+
+    <div class="field">
+      <label for="WAN1_IP_CustomerSUB1">WAN MGMT RT MAIN</label>
+      <input type="text" id="WAN1_IP_CustomerSUB1" placeholder="เช่น 10.100.120.11/31"/>
+    </div>
+
+    <div class="field">
+      <label for="WAN2_IP_CustomerSUB2">WAN MGMT RT PROTEC</label>
+      <input type="text" id="WAN2_IP_CustomerSUB2" placeholder="เช่น 10.100.103.105/31"/>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot"></span>WAN / LAN</div>
+  <hr class="line"/>
+
+  <div class="form-grid">
+    <div class="field">
+      <label for="WAN_IP_Network">WAN Network</label>
+      <input type="text" id="WAN_IP_Network" placeholder="เช่น 172.19.55.32/29"/>
+    </div>
+
+    <div class="field">
+      <label for="LAN_IP_Network">LAN Network</label>
+      <input type="text" id="LAN_IP_Network" placeholder="เช่น 203.156.1.168/30"/>
+    </div>
+
+    <div class="field">
+      <label for="community_main">Community main</label>
+      <input type="text" id="community_main" placeholder="เช่น 14"/>
+    </div>
+
+    <div class="field">
+      <label for="community_backup">Community backup</label>
+      <input type="text" id="community_backup" placeholder="เช่น 97"/>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot"></span>อื่น ๆ</div>
+  <hr class="line"/>
+
+  <div class="form-grid">
+    <div class="field">
+      <label for="Customerfullname">Customer full name</label>
+      <input type="text" id="Customerfullname" placeholder="เช่น CMI TH_New_Getop(Thailand)"/>
+    </div>
+
+    <div class="field">
+      <label for="PROXY">PROXY</label>
+      <select id="PROXY"></select>
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button class="btn-ghost" type="button" onclick="copyToClipboard()">📋 คัดลอก Config</button>
+    <button class="btn-primary" type="button" onclick="generateConfig()">⚙️ สร้าง Config</button>
+  </div>
+
+  <div class="output-wrapper">
+    <div class="output-header">
+      <div class="output-title">ผลลัพธ์ Config</div>
+      <div class="output-status" id="outputStatus">รอสร้าง Config...</div>
+    </div>
+    <pre id="output">ผลลัพธ์จะแสดงที่นี่...</pre>
+  </div>
+</div>
+
+<script>
+  const proxyOptions = {
+    "huawei-router": [
+      { value: "", label: "None" },
+      { value: "58.82.174.100", label: "PROXY 1" },
+      { value: "182.50.80.57",  label: "PROXY 2" },
+      { value: "58.82.174.23",  label: "PROXY 3" },
+      { value: "182.50.80.27",  label: "PROXY 4" },
+      { value: "182.50.80.7",   label: "PROXY 5" },
+      { value: "182.50.80.41",  label: "PROXY 6" },
+      { value: "58.82.174.4",   label: "PROXY 7" },
+      { value: "58.82.174.8",   label: "PROXY 8" },
+      { value: "182.50.80.43",  label: "PROXY 9" },
+      { value: "58.82.174.10",  label: "PROXY 10" }
+    ],
+    "huawei-switch": [
+      { value: "", label: "None" },
+      { value: "10.20.1.201", label: "PROXY 1" },
+      { value: "10.20.1.92",  label: "PROXY 2" },
+      { value: "10.20.1.213", label: "PROXY 3" },
+      { value: "10.20.1.204", label: "PROXY 4" },
+      { value: "10.20.1.115", label: "PROXY 5" },
+      { value: "10.20.1.206", label: "PROXY 6" },
+      { value: "10.20.1.207", label: "PROXY 7" },
+      { value: "10.20.1.208", label: "PROXY 8" },
+      { value: "10.20.1.209", label: "PROXY 9" },
+      { value: "10.20.1.10",  label: "PROXY 10" }
+    ],
+    "cisco-4331": [
+      { value: "", label: "None" },
+      { value: "58.82.174.100", label: "PROXY 1" },
+      { value: "182.50.80.57",  label: "PROXY 2" },
+      { value: "58.82.174.23",  label: "PROXY 3" },
+      { value: "182.50.80.27",  label: "PROXY 4" },
+      { value: "182.50.80.7",   label: "PROXY 5" },
+      { value: "182.50.80.41",  label: "PROXY 6" },
+      { value: "58.82.174.4",   label: "PROXY 7" },
+      { value: "58.82.174.8",   label: "PROXY 8" },
+      { value: "182.50.80.43",  label: "PROXY 9" },
+      { value: "58.82.174.10",  label: "PROXY 10" }
+    ]
+  };
+
+  function populateProxyOptions() {
+    const deviceType = document.getElementById("deviceType").value;
+    const select = document.getElementById("PROXY");
+    const current = select.value;
+    const opts = proxyOptions[deviceType] || proxyOptions["huawei-router"];
+    select.innerHTML = "";
+    opts.forEach(o => {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label + (o.value ? ` (${o.value})` : "");
+      select.appendChild(opt);
+    });
+    if ([...select.options].some(o => o.value === current)) {
+      select.value = current;
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    populateProxyOptions();
+    document.getElementById("deviceType").addEventListener("change", populateProxyOptions);
+  });
+
+  function generateConfig() {
+    const deviceType = document.getElementById("deviceType").value || "huawei-router";
+
+    let formData = {
+      Cxxx: document.getElementById("Cxxx").value || "",
+      RT_Name: document.getElementById("RT_Name").value || "",
+      VLAN: document.getElementById("VLAN").value || "",
+      LOOPBACK: document.getElementById("LOOPBACK").value || "",
+      Name_main_raw: document.getElementById("Name_main").value || "",
+      Name_Protection_raw: document.getElementById("Name_Protection").value || "",
+      WAN1_IP_NODE_raw: document.getElementById("WAN1_IP_NODE").value || "",
+      WAN1_IP_CustomerSUB1: document.getElementById("WAN1_IP_CustomerSUB1").value || "",
+      WAN2_IP_NODE_raw: document.getElementById("WAN2_IP_NODE").value || "",
+      WAN2_IP_CustomerSUB2: document.getElementById("WAN2_IP_CustomerSUB2").value || "",
+      WAN_IP_Network: document.getElementById("WAN_IP_Network").value || "",
+      LAN_IP_Network: document.getElementById("LAN_IP_Network").value || "",
+      community_main: document.getElementById("community_main").value || "",
+      community_backup: document.getElementById("community_backup").value || "",
+      Customerfullname: document.getElementById("Customerfullname").value || "",
+      PROXY: document.getElementById("PROXY").value || ""
+    };
+
+    // ===== Helpers =====
+    function parseIpCidr(str) {
+      if (!str) return { ip: "", cidr: "" };
+      let parts = str.trim().split(/[\/\s]+/);
+      return { ip: parts[0] || "", cidr: parts[1] || "" };
+    }
+    function toCliMask(str) {
+      let { ip, cidr } = parseIpCidr(str);
+      if (!ip) return "";
+      if (!cidr) return ip;
+      return `${ip} ${cidr}`;
+    }
+    function stripSubnet(str) { return parseIpCidr(str).ip; }
+    function cidrToMask(cidr) {
+      cidr = Number(cidr);
+      if (!Number.isInteger(cidr) || cidr < 0 || cidr > 32) return "";
+      let mask=[],bits=cidr;
+      for (let i=0;i<4;i++){
+        let take=Math.min(8,bits);
+        let oct=take===0?0:(0xff<<(8-take))&0xff;
+        mask.push(oct);
+        bits-=take;
+      }
+      return mask.join(".");
+    }
+    function addToIp(ip, increment) {
+      if (!ip) return "";
+      let o = ip.split(".").map(Number);
+      if (o.length!==4 || o.some(n=>isNaN(n))) return ip;
+      let carry = increment;
+      for (let i=3;i>=0 && carry!==0;i--){
+        let val=o[i]+carry;
+        o[i]=val%256;
+        carry=Math.floor(val/256);
+      }
+      return o.join(".");
+    }
+    function getGateway(str) {
+      if (!str) return "";
+      let { ip, cidr } = parseIpCidr(str);
+      if (!ip) return "";
+      let o = ip.split(".").map(Number);
+      if (o.length!==4 || o.some(n=>isNaN(n))) return str.trim();
+      if (o[3]<255) o[3]+=1;
+      let gwIp = o.join(".");
+      return cidr ? `${gwIp} ${cidr}` : gwIp;
+    }
+
+    // ตัด prefix + ลบ # สำหรับชื่อ node
+    function normalizeNodeName(raw) {
+      if (!raw) return "";
+      let name = raw.trim();
+      const patterns = [
+        /^CX600_/i,
+        /^JT-SW2-CX_/i,
+        /^JT-SW1-CX_/i,
+        /^JT-M4-/i,
+        /^ATN950B_/i,
+        /^ATN910C_/i
+      ];
+      patterns.forEach(re => { name = name.replace(re, ""); });
+      return name.replace(/#/g, "");
+    }
+
+    function parseNode(raw){
+      if(!raw) return {node:"",iface:""};
+      let p=raw.trim().split(/\s+/);
+      return {node:p[0]||"",iface:p[1]||""};
+    }
+    function buildDescriptionFromParsed(p){
+      if(!p.node||!p.iface) return "";
+      return `[NODE]:TO:[${p.node}]<VIA>[JAS]:[${p.iface}]`;
+    }
+
+    // แปลงชื่อ interface ฝั่ง Node (เช่น GE0/3/20 => GigabitEthernet0/3/20)
+    function toNodeIface(iface) {
+      if (!iface) return "";
+      let s = iface.trim();
+      s = s.replace(/^10GE/i, "10GigabitEthernet");
+      s = s.replace(/^GE/i, "GigabitEthernet");
+      return s;
+    }
+
+    // ===== CID rule (.124 / .123) =====
+    const cidTrim = (formData.Cxxx || "").trim();
+    const isP = /^P/i.test(cidTrim);
+    const mgmtDot1q = isP ? "123" : "124";
+    formData.MGMT_VLAN = mgmtDot1q;
+
+    // mask ตาม / ของ MGMT (node) ทั้งสองเส้น
+    const wan1Node = parseIpCidr(formData.WAN1_IP_NODE_raw);
+    const wan2Node = parseIpCidr(formData.WAN2_IP_NODE_raw);
+    formData.WAN1_NODE_MASK = cidrToMask(wan1Node.cidr);
+    formData.WAN2_NODE_MASK = cidrToMask(wan2Node.cidr);
+
+    // ===== Pre-compute =====
+    formData.WAN1_IP_CustomerSUB1_cli = toCliMask(formData.WAN1_IP_CustomerSUB1);
+    formData.WAN2_IP_CustomerSUB2_cli = toCliMask(formData.WAN2_IP_CustomerSUB2);
+
+    formData.WAN1_IP_NODE = stripSubnet(formData.WAN1_IP_NODE_raw);
+    formData.WAN2_IP_NODE = stripSubnet(formData.WAN2_IP_NODE_raw);
+    formData.WAN1_IP_Customer = stripSubnet(formData.WAN1_IP_CustomerSUB1);
+    formData.WAN2_IP_Customer = stripSubnet(formData.WAN2_IP_CustomerSUB2);
+
+    formData.LAN_IP_Gateway = getGateway(formData.LAN_IP_Network);
+
+    // WAN base + offset
+    if (formData.WAN_IP_Network) {
+      let { ip: baseIp, cidr: wanCidr } = parseIpCidr(formData.WAN_IP_Network);
+      if (baseIp) {
+        const isSwitch = (deviceType === "huawei-switch");
+        // Router: +3, Switch: +6
+        formData.Wan_IP_Customer_RT  = addToIp(baseIp, isSwitch ? 6 : 3);
+        formData.WAN_IP_MAIN         = addToIp(baseIp, 1);
+        formData.WAN_IP_PROTECTION   = addToIp(baseIp, 2);
+
+        const wanMask = cidrToMask(wanCidr);
+        formData.WAN_IP_Mask = wanMask || "";
+        formData.Wan_IP_Customer_RT_withMask =
+          (formData.Wan_IP_Customer_RT && wanMask)
+            ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
+            : formData.Wan_IP_Customer_RT;
+
+        formData.Wan_IP_Customer_RT_mask =
+          (formData.Wan_IP_Customer_RT && wanMask)
+            ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
+            : "";
+
+        // Cisco wants: network <ip> mask <mask>
+        formData.WAN_NET_IP   = baseIp || "";
+        formData.WAN_NET_MASK = wanMask || "";
+
+        // (คงไว้สำหรับที่อื่น)
+        formData.WAN_IP_Network_mask = (baseIp && wanMask) ? `${baseIp} ${wanMask}` : "";
+      } else {
+        formData.Wan_IP_Customer_RT = "";
+        formData.Wan_IP_Customer_RT_mask = "";
+        formData.WAN_IP_MAIN = "";
+        formData.WAN_IP_PROTECTION = "";
+        formData.WAN_IP_Network_mask = "";
+        formData.WAN_NET_IP = "";
+        formData.WAN_NET_MASK = "";
+        formData.WAN_IP_Mask = "";
+        formData.Wan_IP_Customer_RT_withMask = "";
+      }
+    } else {
+      formData.Wan_IP_Customer_RT = "";
+      formData.Wan_IP_Customer_RT_mask = "";
+      formData.WAN_IP_MAIN = "";
+      formData.WAN_IP_PROTECTION = "";
+      formData.WAN_IP_Network_mask = "";
+      formData.WAN_NET_IP = "";
+      formData.WAN_NET_MASK = "";
+      formData.WAN_IP_Mask = "";
+      formData.Wan_IP_Customer_RT_withMask = "";
+    }
+
+    // Cisco: LAN network + mask (for "network ... mask ...")
+    if (formData.LAN_IP_Network) {
+      let { ip: lanBase, cidr: lanCidr } = parseIpCidr(formData.LAN_IP_Network);
+      const lanMask = cidrToMask(lanCidr);
+
+      formData.LAN_NET_IP   = lanBase || "";
+      formData.LAN_NET_MASK = lanMask || "";
+
+      // (คงไว้สำหรับที่อื่น)
+      formData.LAN_IP_Network_mask = (lanBase && lanMask) ? `${lanBase} ${lanMask}` : "";
+    } else {
+      formData.LAN_NET_IP = "";
+      formData.LAN_NET_MASK = "";
+      formData.LAN_IP_Network_mask = "";
+    }
+
+    // Cisco: LAN gateway ip + mask (ip address X Y)
+    if (formData.LAN_IP_Gateway) {
+      let { ip: lanGwIp, cidr: lanGwCidr } = parseIpCidr(formData.LAN_IP_Gateway);
+      const lanGwMask = cidrToMask(lanGwCidr);
+      formData.LAN_IP_Gateway_mask = (lanGwIp && lanGwMask) ? `${lanGwIp} ${lanGwMask}` : "";
+    } else {
+      formData.LAN_IP_Gateway_mask = "";
+    }
+
+    // Nodes & descriptions
+    const mainParsed = parseNode(formData.Name_main_raw);
+    const protParsed = parseNode(formData.Name_Protection_raw);
+    const hasProtect =
+      !!(formData.Name_Protection_raw && formData.WAN2_IP_NODE_raw && formData.WAN2_IP_CustomerSUB2);
+
+    formData.Name_main_only       = normalizeNodeName(mainParsed.node);
+    formData.Name_Protection_only = normalizeNodeName(protParsed.node);
+
+    formData.DES1_built = buildDescriptionFromParsed(mainParsed);
+    formData.DES2_built = hasProtect ? buildDescriptionFromParsed(protParsed) : "";
+
+    // ===== Preconfig Node =====
+    function buildPreconfigNodeSection() {
+      const cid = (formData.Cxxx || "").trim();
+      const rt  = (formData.RT_Name || "").trim();
+      const vlanSvc = (formData.VLAN || "").trim();
+      const loop = (formData.LOOPBACK || "").trim();
+      const isPcid = /^P/i.test(cid);
+
+      const mNode = parseNode(formData.Name_main_raw);
+      const pNode = parseNode(formData.Name_Protection_raw);
+
+      const mNodeName = (mNode.node || "").trim();
+      const pNodeName = (pNode.node || "").trim();
+      const mIface = toNodeIface(mNode.iface || "");
+      const pIface = toNodeIface(pNode.iface || "");
+
+      const hasProtectLocal =
+        !!(formData.Name_Protection_raw && formData.WAN2_IP_NODE_raw && formData.WAN2_IP_CustomerSUB2);
+
+      const mNodeIp = stripSubnet(formData.WAN1_IP_NODE_raw);
+      const mRtIp   = stripSubnet(formData.WAN1_IP_CustomerSUB1);
+      const pNodeIp = stripSubnet(formData.WAN2_IP_NODE_raw);
+      const pRtIp   = stripSubnet(formData.WAN2_IP_CustomerSUB2);
+
+      const mMask = formData.WAN1_NODE_MASK || "";
+      const pMask = formData.WAN2_NODE_MASK || "";
+
+      // L3VPN only for CID starts with C
+      const includeL3vpn = !isPcid;
+
+      const wanNet = parseIpCidr(formData.WAN_IP_Network);
+      const wanMask = cidrToMask(wanNet.cidr);
+
+      const l3MainIp = formData.WAN_IP_MAIN || "";
+      const l3ProtIp = formData.WAN_IP_PROTECTION || "";
+      const l3PeerIp = formData.Wan_IP_Customer_RT || "";
+
+      const descBase = `:${cid}:${rt}`;
+
+      function l3Block(nodeIf, nodeL3Ip) {
+        if (!includeL3vpn) return "";
+        if (!vlanSvc || !nodeIf || !nodeL3Ip || !wanMask || !l3PeerIp) return "";
+        return `
+#
+ip vpn-instance ${vlanSvc}
+ description :${cid}:${rt}
+ ipv4-family
+  route-distinguisher 65423:${vlanSvc}
+  apply-label per-route
+  vpn-target 65423:65423 export-extcommunity
+  vpn-target 65423:65423 import-extcommunity
+#
+interface ${nodeIf}.${vlanSvc}
+ vlan-type dot1q ${vlanSvc}
+ mtu 9500
+ description :${cid}:${rt}
+ ip binding vpn-instance ${vlanSvc}
+ ip address ${nodeL3Ip} ${wanMask}
+ statistic enable
+#
+bgp 65423
+ ipv4-family vpn-instance ${vlanSvc}
+  import-route direct
+  peer ${l3PeerIp} as-number 65001
+  peer ${l3PeerIp} description :${cid}:${rt}
+  peer ${l3PeerIp} ebgp-max-hop 5
+  peer ${l3PeerIp} connect-interface ${nodeIf}.${vlanSvc}
+  peer ${l3PeerIp} bfd enable
+  peer ${l3PeerIp} route-policy rp_customer_l3vpn_in import
+  peer ${l3PeerIp} route-policy rp_customer_l3vpn_out export
+  peer ${l3PeerIp} route-limit 10 80 alert-only
+  peer ${l3PeerIp} advertise-community
+#`;
+      }
+
+      function jtExtraBlock(nodeName, nodeIf) {
+        if (!/^JT/i.test(nodeName || "")) return "";
+        if (!vlanSvc || !nodeIf) return "";
+        return `
+vlan ${vlanSvc}
+name "${cid}:${rt}"
+
+interface Eth-Trunk10
+port trunk allow-pass vlan ${vlanSvc}
+
+interface ${nodeIf}
+ undo negotiation auto
+ description :${cid}:${rt}
+ port link-type trunk
+ undo port trunk allow-pass vlan 1
+ port trunk allow-pass vlan ${formData.MGMT_VLAN} ${vlanSvc}
+`;
+      }
+
+      function mgmtBlock(nodeIf, nodeNodeIp, nodeMask, nodeRtIp, nqaId) {
+        if (!nodeIf || !nodeNodeIp || !nodeMask || !nodeRtIp) return "";
+        if (!loop) return "";
+        return `
+#
+interface ${nodeIf}.${formData.MGMT_VLAN}
+ vlan-type dot1q ${formData.MGMT_VLAN}
+ description ${descBase}
+ ip binding vpn-instance __dcn_vpn__
+ ip address ${nodeNodeIp} ${nodeMask}
+ statistic enable
+#
+nqa test-instance ${cid} ${nqaId}
+ test-type icmp
+ destination-address ipv4 ${nodeRtIp}
+ source-address ipv4 ${nodeNodeIp}
+ vpn-instance __dcn_vpn__
+ frequency 30
+ start now
+#
+ip route-static vpn-instance __dcn_vpn__ ${loop} 32 ${nodeRtIp} track nqa ${cid} ${nqaId}
+#`;
+      }
+
+      let out = `===== PRECONFIG NODE =====`;
+
+      if (mNodeName && mIface) {
+        out += `
+NODE ${mNodeName}
+${mgmtBlock(mIface, mNodeIp, mMask, mRtIp, 1)}
+${l3Block(mIface, l3MainIp)}
+${jtExtraBlock(mNodeName, mIface)}`.trimEnd();
+      }
+
+      if (hasProtectLocal && pNodeName && pIface) {
+        out += `
+
+NODE ${pNodeName}
+${mgmtBlock(pIface, pNodeIp, pMask, pRtIp, 2)}
+${l3Block(pIface, l3ProtIp)}
+${jtExtraBlock(pNodeName, pIface)}`.trimEnd();
+      }
+
+      out += `
+
+===== END PRECONFIG NODE =====`;
+      return out;
+    }
+
+    const preconfigNodeText = buildPreconfigNodeSection();
+
+    // ===== Build original config =====
+    let textTemplate;
+    if (deviceType === "huawei-switch") {
+      textTemplate = buildSwitchConfig(formData, hasProtect);
+    } else if (deviceType === "cisco-4331") {
+      textTemplate = buildCiscoConfig(formData, hasProtect);
+    } else {
+      textTemplate = buildHuaweiRouterConfig(formData, hasProtect);
+    }
+
+    const finalOutput = `${preconfigNodeText}\n\n${textTemplate}`.trim();
+
+    document.getElementById("output").textContent = finalOutput;
+    document.getElementById("outputStatus").textContent = "สร้าง Config แล้ว";
+  }
+
+  // ===== HUAWEI ROUTER =====
+  function buildHuaweiRouterConfig(formData, hasProtect) {
+    return `
+
+clock timezone TH add 07:00:00	
+
+syst
+		
+sysname :[${formData.Cxxx}]:RT_${formData.RT_Name}			
+
+inter Vlanif 1
+undo ip address 
+shutdown
+q
+
+ip vpn-instance __dcn_vpn__
+ ipv4-family
+q
+
+q						
+
+port combination-mode 10GE interface MultiGE 0/0/0
+y
+port combination-mode 10GE interface MultiGE 0/0/1
+y
+
+interface LoopBack1
+ ip binding vpn-instance __dcn_vpn__
+ ip address ${formData.LOOPBACK} 32
+q                   
+
+info-center loghost 58.82.174.32 local-time
+info-center loghost source LoopBack 1
+                                                             
+dns resolve                                                                                                    
+
+vlan batch 10 124 ${formData.VLAN}
+q
+
+install feature-software WEAKEA
+syst
+
+telnet server enable
+
+stelnet server enable
+
+snetconf server enable
+
+lldp enable
+
+dhcp enable
+dhcp server bootp automatic
+
+ip host DNS1 182.50.80.4
+ip host DNS2 182.50.80.5
+
+acl name Monitor-Telnet 2000  
+ rule 0 permit source 10.0.0.0 0.255.255.255
+ rule 1 permit source 58.82.174.0 0.0.0.255 
+ rule 2 permit source 169.254.0.0 0.0.255.255 
+ rule 3 permit source 172.16.0.0 0.15.255.255 
+ rule 4 permit source 182.50.80.0 0.0.0.127 
+ rule 5 permit source 192.168.0.0 0.0.255.255 
+ rule 1000 deny 
+q
+
+telnet server acl 2000
+
+ssh server acl 2000
+
+snmp-agent acl 2000
+
+ftp server acl 2000
+
+traffic classifier GRAPH-DOMESTIC type or
+ if-match dscp default 
+traffic classifier GRAPH-INTER type or
+ if-match dscp af11 
+q
+
+traffic behavior GRAPH-DOMESTIC
+ statistic enable                         
+traffic behavior GRAPH-INTER
+ statistic enable
+q
+
+traffic policy GRAPH-DOMESTIC
+ classifier GRAPH-DOMESTIC behavior GRAPH-DOMESTIC precedence 1
+traffic policy GRAPH-INTER
+ classifier GRAPH-INTER behavior GRAPH-INTER precedence 5
+q
+
+radius-server template jasradius
+ radius-server shared-key cipher +jastel+
+y
+ radius-server authentication 10.20.1.31 1812 vpn-instance __dcn_vpn__ source ip-address ${formData.LOOPBACK}
+ radius-server accounting 10.20.1.31 1813 vpn-instance __dcn_vpn__ source ip-address ${formData.LOOPBACK}
+ radius-server retransmit 2
+q
+
+aaa
+  authentication-scheme default
+  authentication-mode local radius
+ authentication-scheme radius
+  authentication-mode radius
+ authentication-scheme jasradius
+  authentication-mode radius local
+ authorization-scheme default
+ accounting-scheme default
+ accounting-scheme jasradius
+  accounting start-fail online
+ local-aaa-user password policy administrator 
+  undo password alert original 
+ domain default
+  authentication-scheme default
+ domain default_admin
+  authentication-scheme jasradius
+  accounting-scheme jasradius
+  radius-server jasradius
+
+ local-user nocjastel password irreversible-cipher Ov80ylgm]#
+ local-user nocjastel privilege level 3
+y
+ local-user nocjastel service-type telnet ssh
+y
+ local-user jastel password irreversible-cipher Jastel@min1234#
+ local-user jastel privilege level 3
+y
+ local-user jastel service-type telnet ssh
+y
+q
+
+interface Vlanif10                        
+ ip address ${formData.LAN_IP_Gateway}
+ dhcp select interface
+ dhcp server dns-list 182.50.80.4 8.8.8.8
+ traffic-policy GRAPH-DOMESTIC outbound
+ set flow-stat interval 30
+q
+
+clear configuration interface GE 0/0/4
+y
+
+inter range GE 0/0/0 to GE 0/0/7
+ portswitch
+ description [LAN]:TO:[${formData.Cxxx}]:[CUST]
+ set flow-stat interval 30
+ port link-type access
+ port default vlan 10
+ speed 1000
+ duplex full
+q
+
+interface Vlanif124
+ ip binding vpn-instance __dcn_vpn__
+ ip address ${formData.WAN1_IP_CustomerSUB1_cli}${hasProtect ? `
+ ip address ${formData.WAN2_IP_CustomerSUB2_cli} sub` : ""}
+q
+
+interface Vlanif${formData.VLAN}
+ ip address ${formData.Wan_IP_Customer_RT} 29
+ traffic-policy GRAPH-INTER inbound
+q
+
+interface 10GE0/0/0
+ portswitch
+ description ${formData.DES1_built}
+ set flow-stat interval 30
+ port link-type trunk
+ port trunk allow-pass vlan 124 ${formData.VLAN}
+ device transceiver 1000BASE-X
+ y
+ 
+ ${hasProtect ? `
+interface 10GE0/0/1
+ portswitch
+ description ${formData.DES2_built}
+ set flow-stat interval 30
+ port link-type trunk
+ port trunk allow-pass vlan 124 ${formData.VLAN}
+ device transceiver 1000BASE-X
+ y
+ ` : ""}
+
+nqa test-instance ${formData.Name_main_only} 1
+ test-type icmp
+ destination-address ipv4 ${formData.WAN1_IP_NODE}
+ source-address ipv4 ${formData.WAN1_IP_Customer}
+ vpn-instance __dcn_vpn__
+ frequency 30
+ start now${hasProtect ? `
+nqa test-instance ${formData.Name_Protection_only} 2
+ test-type icmp
+ destination-address ipv4 ${formData.WAN2_IP_NODE}
+ source-address ipv4 ${formData.WAN2_IP_Customer}
+ vpn-instance __dcn_vpn__
+ frequency 30
+ start now` : ""}
+q
+
+ip route-static vpn-instance __dcn_vpn__ 0.0.0.0 0.0.0.0 ${formData.WAN1_IP_NODE} track nqa ${formData.Name_main_only} 1${hasProtect ? `
+ip route-static vpn-instance __dcn_vpn__ 0.0.0.0 0.0.0.0 ${formData.WAN2_IP_NODE} preference 100 track nqa ${formData.Name_Protection_only} 2` : ""}
+
+ip route-static ${formData.LAN_IP_Network} NULL 0
+
+ip ip-prefix pf_${formData.Cxxx} index 10 permit ${formData.WAN_IP_Network}
+ip ip-prefix pf_${formData.Cxxx} index 20 permit ${formData.LAN_IP_Network}
+
+route-policy rp_peer_node_main_in permit node 10
+ apply preferred-value 100
+
+route-policy rp_peer_node_main_out permit node 10
+ if-match ip-prefix pf_${formData.Cxxx}
+ apply community 65423:${formData.community_main}${hasProtect ? `
+
+route-policy rp_peer_node_protect_out permit node 10
+ if-match ip-prefix pf_${formData.Cxxx}
+ apply community 65423:${formData.community_backup}
+ apply cost 50` : ""}
+q
+
+bgp 65001
+ router-id ${formData.Wan_IP_Customer_RT}
+ graceful-restart
+ peer ${formData.WAN_IP_MAIN} as-number 65423
+ peer ${formData.WAN_IP_MAIN} description ${formData.Name_main_only}
+ peer ${formData.WAN_IP_MAIN} bfd enable
+ peer ${formData.WAN_IP_MAIN} timer keepalive 5 hold 15
+y${hasProtect ? `
+
+ peer ${formData.WAN_IP_PROTECTION} as-number 65423
+ peer ${formData.WAN_IP_PROTECTION} description ${formData.Name_Protection_only}
+ peer ${formData.WAN_IP_PROTECTION} bfd enable
+ peer ${formData.WAN_IP_PROTECTION} timer keepalive 5 hold 15
+y` : ""}
+
+ #
+ ipv4-family unicast
+  undo synchronization
+  network ${formData.LAN_IP_Network}
+  network ${formData.WAN_IP_Network}
+  peer ${formData.WAN_IP_MAIN} enable
+  peer ${formData.WAN_IP_MAIN} advertise-community
+  peer ${formData.WAN_IP_MAIN} route-policy rp_peer_node_main_in import 
+  peer ${formData.WAN_IP_MAIN} route-policy rp_peer_node_main_out export${hasProtect ? `
+  peer ${formData.WAN_IP_PROTECTION} enable 
+  peer ${formData.WAN_IP_PROTECTION} advertise-community   
+  peer ${formData.WAN_IP_PROTECTION} route-policy rp_peer_node_protect_out export` : ""}
+ q
+q
+
+error-down auto-recovery cause bpdu-protection interval 300
+
+ snmp-agent community write +jastel+
+ snmp-agent sys-info version v2c
+ snmp-agent sys-info contact "${formData.Customerfullname}"
+ snmp-agent target-host host-name zabbix-proxy trap address udp-domain ${formData.PROXY} vpn-instance __dcn_vpn__ udp-port 10162 params securityname +jastel+  
+ snmp-agent target-host trap address udp-domain 169.254.254.40 vpn-instance __dcn_vpn__ params securityname cipher +jastel+ v2c 
+ snmp-agent target-host trap address udp-domain 169.254.254.41 vpn-instance __dcn_vpn__ params securityname cipher +jastel+ v2c private-netmanager 
+                           
+ snmp-agent sys-info version v3 disable 
+ snmp-agent trap source  LoopBack1
+ snmp-agent trap enable
+ snmp-agent protocol source-status all-interface
+ snmp-agent protocol source-status ipv6 all-interface
+ snmp-agent proxy protocol source-status all-interface
+ snmp-agent proxy protocol source-status ipv6 all-interface
+ snmp-agent 
+
+ snmp-agent notification-log enable
+ snmp-agent notification-log global-ageout 36
+ snmp-agent extend error-code enable
+
+user-interface maximum-vty 15 
+user-interface vty 0 14
+ acl 2000 inbound
+ authentication-mode aaa
+ user privilege level 3
+ protocol inbound telnet
+ dis th
+q
+
+ntp server source-interface all enable
+y
+
+ntp authentication enable
+ntp authentication-keyid 6 authentication-mode md5 cipher ${"9IPjtW@ilGmFWn|Q\\303".replaceAll("/", "\\/")}
+ntp trusted authentication-keyid 6
+ntp unicast-server 10.20.1.100 authentication-keyid 6 vpn-instance __dcn_vpn__ source-interface  LoopBack1 preferred 
+
+telnet server-source all-interface
+y
+telnet ipv6 server-source all-interface
+y
+
+q
+
+save
+
+y
+`;
+  }
+
+  // ===== HUAWEI SWITCH =====
+  function buildSwitchConfig(formData, hasProtect) {
+    return `
+install feature-software WEAKEA
+
+syst
+
+sysname :[${formData.Cxxx}]:SW_${formData.RT_Name}                                 
+
+vlan batch 124 ${formData.VLAN}
+
+stp mode vbst
+stp enable
+y
+
+telnet server enable
+telnet server-source all-interface
+y
+
+stelnet server enable
+
+lldp enable
+
+clock timezone BKK add 07:00:00
+
+acl name Monitor-Telnet 2000
+ rule 0 permit source 182.50.80.0 0.0.0.127
+ rule 1 permit source 58.82.174.240 0.0.0.15
+ rule 2 permit source 192.168.0.0 0.0.255.255 
+ rule 3 permit source 172.16.0.0 0.15.255.255 
+ rule 4 permit source 10.0.0.0 0.255.255.255 
+ rule 5 permit source 169.254.0.0 0.0.255.255 
+ rule 6 permit source 58.82.174.0 0.0.0.255
+ rule 1000 deny 
+qu
+
+telnet server acl 2000
+
+interface Loopback 1
+ ip address ${formData.LOOPBACK} 32
+q
+
+info-center loghost 10.20.2.2 local-time 
+info-center loghost source LoopBack1
+
+vlan 124
+ name MGMT
+vlan ${formData.VLAN}
+ name ":[${formData.Cxxx}]:${formData.RT_Name}"
+q
+
+radius-server template Jastel-Radius-Sv
+ radius-server shared-key cipher +jastel+
+ y
+ radius-server authentication 10.20.1.31 1812 source ip-address ${formData.LOOPBACK}
+ radius-server accounting 10.20.1.31 1813 source ip-address ${formData.LOOPBACK}
+ radius-server retransmit 2
+ quit
+
+aaa
+ authentication-scheme default
+ authentication-scheme Aut-Jastel-Radius
+  authentication-mode radius local
+ authorization-scheme default
+ accounting-scheme default
+ accounting-scheme Acc-Jastel-Radius
+  accounting-mode radius
+  accounting start-fail online            
+ domain default
+ domain default_admin
+  authentication-scheme Aut-Jastel-Radius
+  accounting-scheme Acc-Jastel-Radius
+  radius-server Jastel-Radius-Sv
+
+ local-user nocjastel password irreversible-cipher Ov80ylgm]#
+ local-user nocjastel privilege level 3 
+y
+ local-user nocjastel service-type telnet ssh
+ 
+ local-user jastel password irreversible-cipher Ov80ylgm]#
+ local-user jastel privilege level 3
+y
+ local-user jastel service-type telnet
+q
+
+ntp authentication enable
+ntp authentication-keyid 6 authentication-mode md5 cipher 9IPjtW@ilGmFWn|\\303
+ntp unicast-server 10.20.1.100 authentication-keyid 6 source-interface LoopBack 1 preferred
+ntp trusted authentication-keyid 6
+
+interface Vlanif124
+ ip address ${formData.WAN1_IP_CustomerSUB1_cli}${hasProtect ? `
+ ip address ${formData.WAN2_IP_CustomerSUB2_cli} sub` : ""}
+q
+
+interface Vlanif${formData.VLAN}
+ ip address ${formData.Wan_IP_Customer_RT_withMask}
+q
+
+interface GE 1/0/1
+ negotiation disable 
+ description [ACCESS]:TO:[${formData.Cxxx}]<VIA>[JAS]:[Ge0/0/8]
+ set flow-stat interval 30
+ port link-type access
+ port default vlan ${formData.VLAN}
+q
+
+interface 10GE1/0/3           
+ description ${formData.DES1_built}
+ negotiation disable
+ port link-type trunk
+ port trunk allow-pass vlan 124 ${formData.VLAN}
+ lldp admin-status txrx
+q${hasProtect ? `
+interface 10GE1/0/4           
+ description ${formData.DES2_built}
+ negotiation disable
+ port link-type trunk
+ port trunk allow-pass vlan 124 ${formData.VLAN} 
+ lldp admin-status txrx
+q` : ""}
+
+cpu-defend policy jastel
+ car packet-type icmp pps 4096
+qu
+
+cpu-defend-policy jastel mcu
+
+snmp-agent
+snmp-agent local-engineid 800007DB03BC9C31DE2A93
+y
+snmp-agent mib-view included iso-view iso
+snmp-agent community read +jastel+ mib-view iso-view acl 2000
+snmp-agent sys-info version v2c
+
+snmp-agent sys-info version v3 disable 
+
+snmp-agent sys-info contact "${formData.Customerfullname}"                                     
+snmp-agent target-host trap address udp-domain 169.254.254.40 params securityname cipher +jastel+ v2c private-netmanager
+snmp-agent target-host trap address udp-domain 169.254.254.41 params securityname cipher +jastel+ v2c private-netmanager
+snmp-agent target-host trap address udp-domain ${formData.PROXY} udp-port 10162 params securityname cipher +jastel+ v2c private-netmanager 
+
+snmp-agent protocol source-status all-interface
+snmp-agent proxy protocol source-status all-interface
+
+snmp-agent trap source LoopBack1
+
+header login information "This system is restricted solely to JASTEL authorized users for legitimate business purposes only. The actual or attempted unauthorized access, use, or modification of this system is strictly prohibited by JASTEL."
+
+nqa test-instance ${formData.Name_main_only} 1
+ test-type icmp
+ destination-address ipv4 ${formData.WAN1_IP_NODE}
+ source-address ipv4 ${formData.WAN1_IP_Customer}
+ frequency 30
+ start now
+q${hasProtect ? `
+nqa test-instance ${formData.Name_Protection_only} 2
+ test-type icmp
+ destination-address ipv4 ${formData.WAN2_IP_NODE}
+ source-address ipv4 ${formData.WAN2_IP_Customer}
+ frequency 30
+ start now
+q
+` : ""}
+
+ip route-static 0.0.0.0 0.0.0.0 ${formData.WAN1_IP_NODE} track nqa ${formData.Name_main_only} 1${hasProtect ? `
+ip route-static 0.0.0.0 0.0.0.0 ${formData.WAN2_IP_NODE} preference 100 track nqa ${formData.Name_Protection_only} 2` : ""}
+
+user-interface con 0
+ authentication-mode password
+ set authentication password cipher jastel@min
+jastel@min
+user-interface vty 0 4
+ authentication-mode aaa
+ user privilege level 3
+ protocol inbound all
+q
+
+user-interface vty 0 4
+ authentication-mode aaa
+ user privilege level 3
+ protocol inbound all
+q
+
+set save-configuration checkpoint daily time 00:00
+
+q
+
+save
+
+y
+`;
+  }
+
+  // ===== CISCO ISR4331 =====
+  function buildCiscoConfig(formData, hasProtect) {
+    // ใช้ WAN/LAN แบบมี "/" ใน prefix-list ตาม requirement
+    const wanPrefix = (formData.WAN_IP_Network || "").trim();
+    const lanPrefix = (formData.LAN_IP_Network || "").trim();
+    const proxyHost = (formData.PROXY || "").trim();
+
+    return `
+service timestamps debug datetime msec localtime
+service timestamps log datetime localtime
+service password-encryption
+
+hostname RT_${formData.RT_Name}_${formData.Cxxx}									 
+
+boot-start-marker
+boot-end-marker
+
+logging count
+logging buffered 40960 debugging
+enable secret 5 $1$e7gc$sujxcNvCNQF9yRmsHqb240
+
+aaa new-model
+
+aaa authentication login default group tacacs+ local
+aaa authorization exec default group tacacs+ local 
+aaa authorization commands 15 default group tacacs+ local 
+aaa accounting exec default start-stop group tacacs+
+aaa accounting network default start-stop group tacacs+
+aaa accounting system default start-stop group tacacs+
+
+aaa session-id common
+clock timezone thai 7
+
+ip domain lookup source-interface Gi0/0/1
+ip name-server 182.50.80.4
+ip name-server 182.50.80.5
+
+ no dspfarm
+
+username noc privilege 15 secret ov80ylgm]#
+username jastel privilege 15 secret x]kC]k,mvfohex]k
+archive
+ log config
+  logging enable
+  notify syslog
+  hidekeys
+exit
+
+exit
+
+class-map match-any limit_inter
+ match ip dscp af11 
+exit
+
+policy-map limit_inter
+ class limit_inter
+exit
+
+exit
+
+interface Gi0/0/0
+ no shutdown
+ description  [WAN]:TO:[${formData.Cxxx}]:[Ge0/0/1]
+ ip address ${formData.Wan_IP_Customer_RT_mask}
+ load-interval 30
+ duplex full
+ speed 1000
+
+interface Gi0/0/1
+ no shutdown
+ description [LAN]:TO:[${formData.Cxxx}]:[CUST]
+ ip address ${formData.LAN_IP_Gateway_mask}
+ load-interval 30
+ duplex full
+ service-policy output limit_inter
+exit
+
+router bgp 65001
+ bgp router-id ${formData.Wan_IP_Customer_RT}
+ bgp log-neighbor-changes
+ neighbor ${formData.WAN_IP_MAIN} remote-as 65423
+ neighbor ${formData.WAN_IP_MAIN} description ${formData.Name_main_only}
+ neighbor ${formData.WAN_IP_MAIN}  timers 5 20${hasProtect ? `
+ neighbor ${formData.WAN_IP_PROTECTION} remote-as 65423
+ neighbor ${formData.WAN_IP_PROTECTION} description ${formData.Name_Protection_only}
+ neighbor ${formData.WAN_IP_PROTECTION} timers 5 20` : ""}
+
+ address-family ipv4
+  network ${formData.LAN_NET_IP} mask ${formData.LAN_NET_MASK}
+  network ${formData.WAN_NET_IP} mask ${formData.WAN_NET_MASK}
+  neighbor ${formData.WAN_IP_MAIN} activate
+  neighbor ${formData.WAN_IP_MAIN} send-community
+  neighbor ${formData.WAN_IP_MAIN} soft-reconfiguration inbound
+  neighbor ${formData.WAN_IP_MAIN} route-map rp_peer_node_main_in in
+  neighbor ${formData.WAN_IP_MAIN} route-map rp_peer_node_main_out out${hasProtect ? `
+  neighbor ${formData.WAN_IP_PROTECTION} activate
+  neighbor ${formData.WAN_IP_PROTECTION} send-community
+  neighbor ${formData.WAN_IP_PROTECTION} soft-reconfiguration inbound
+  neighbor ${formData.WAN_IP_PROTECTION} route-map rp_peer_node_protect_out out` : ""}
+ exit-address-family
+exit
+
+ip forward-protocol nd
+ip bgp-community new-format
+no ip http server
+no ip http secure-server
+ip tacacs source-interface Gi0/0/0
+
+ip route ${formData.LAN_IP_Network_mask} NULL 0
+
+ip prefix-list pf_${formData.Cxxx} seq 5 permit ${wanPrefix}
+ip prefix-list pf_${formData.Cxxx} seq 10 permit ${lanPrefix}
+
+access-list 30 remark jastel nms
+access-list 30 permit 10.0.0.0 0.255.255.255
+access-list 30 permit 58.82.174.0 0.0.0.255 
+access-list 30 permit 169.254.0.0 0.0.255.255 
+access-list 30 permit 172.16.0.0 0.15.255.255 
+access-list 30 permit 182.50.80.0 0.0.0.127 
+access-list 30 permit 192.168.0.0 0.0.255.255
+access-list 30 permit 58.82.174.240 0.0.0.15
+
+snmp-server community +jastel+ RO 30
+snmp-server trap-source gigabitEthernet 0/0/0
+snmp-server contact "${formData.Customerfullname}"                              						
+snmp-server host ${proxyHost} version 2c +jastel+											 
+snmp-server enable traps
+
+route-map rp_peer_node_main_in permit 10
+ set local-preference 150
+exit
+
+route-map rp_peer_node_main_out permit 10
+ match ip address prefix-list pf_${formData.Cxxx}
+ set community 65423:${formData.community_main}
+exit${hasProtect ? `
+
+route-map rp_peer_node_protect_out permit 10
+ match ip address prefix-list pf_${formData.Cxxx}
+ set metric 50
+ set community 65423:${formData.community_backup}
+exit` : ""}
+
+tacacs server JASTELACS
+ address ipv4 10.10.144.250
+ key 7 004F1907174F0E0A44
+exit
+
+control-plane
+exit
+
+line con 0
+line aux 0
+line vty 0 4
+ access-class 30 in
+ transport input all
+exit
+
+ntp clock-period 17180182
+ntp server WAN
+
+kron policy-list SAVE-CONFIG
+exit 
+
+kron occurrence DAILY-SAVE at 0:01 recurring
+ policy-list SAVE-CONFIG
+end`;
+  }
+
+  function copyToClipboard() {
+    let outputText = document.getElementById("output").textContent;
+    if (!outputText || outputText === "ผลลัพธ์จะแสดงที่นี่...") {
+      alert("ยังไม่มี Config ให้คัดลอก");
+      return;
+    }
+    navigator.clipboard.writeText(outputText).then(() => {
+      alert("Config ถูกคัดลอกไปยังคลิปบอร์ดแล้ว!");
+    }).catch(err => {
+      console.error("ไม่สามารถคัดลอกข้อความได้", err);
+      alert("ไม่สามารถคัดลอกข้อความได้");
+    });
+  }
+</script>
+
+</body>
+</html>
