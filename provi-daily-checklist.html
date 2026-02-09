@@ -1,3 +1,4 @@
+<!-- provi-daily-checklist.html (UPDATED: JSONP chunk + delta sync + logId/event createdAtMs) -->
 <!doctype html>
 <html lang="th">
 <head>
@@ -7,11 +8,7 @@
   <style>
     :root{
       --bg:#0b0f14; --card:#121a24; --muted:#8aa0b8; --text:#e7f0fb; --line:#223043;
-
-      /* ORANGE THEME */
-      --accent:#ff7a18;
-      --accent2:#ff9a3c;
-
+      --accent:#ff7a18; --accent2:#ff9a3c;
       --warn:#f1c40f; --bad:#ff5c7a; --good:#32d583; --chip:#182434;
     }
     *{box-sizing:border-box}
@@ -24,11 +21,7 @@
     .sub{color:var(--muted);font-size:12px;margin-top:4px;}
     .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:900;}
     .btn:hover{border-color:#2f425d}
-    .btn.primary{
-      background:linear-gradient(180deg, rgba(255,122,24,.95), rgba(216,95,15,.95));
-      border-color: rgba(255,122,24,.55);
-      color:#1a0d05;
-    }
+    .btn.primary{background:linear-gradient(180deg, rgba(255,122,24,.95), rgba(216,95,15,.95));border-color: rgba(255,122,24,.55);color:#1a0d05;}
     .btn.danger{background:linear-gradient(180deg,#5a1c2a,#3a101b);border-color:#a52b47}
     .btn[disabled]{opacity:.45;cursor:not-allowed}
     .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:11px;color:#cfe3ff;white-space:nowrap;}
@@ -38,10 +31,7 @@
     .card{background:rgba(18,26,36,.92);border:1px solid var(--line);border-radius:16px;padding:14px;}
     .muted{color:var(--muted);font-size:12px;}
     label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
-    input,select,textarea{
-      width:100%;background:#0e1520;border:1px solid var(--line);color:var(--text);
-      padding:10px;border-radius:12px;outline:none;
-    }
+    input,select,textarea{width:100%;background:#0e1520;border:1px solid var(--line);color:var(--text);padding:10px;border-radius:12px;outline:none;}
     textarea{min-height:54px;resize:vertical}
     .grid{display:grid;gap:12px;}
     @media(min-width:1100px){ .grid.app{grid-template-columns:430px 1fr;} }
@@ -65,14 +55,10 @@
     .step .done{color:#bfe9ff;font-size:11px;margin-top:4px;}
     .toast{position:fixed;right:16px;bottom:16px;background:#0e1520;border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:none;z-index:80;}
 
-    /* Calendar */
     .calHead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
     .calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px;}
     .calDow{font-size:11px;color:#cfe3ff;background:rgba(24,36,52,.6);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-weight:900;}
-    .calCell{
-      min-height:120px;background:#0e1520;border:1px solid var(--line);border-radius:14px;padding:8px;
-      display:flex;flex-direction:column;gap:6px;cursor:pointer;
-    }
+    .calCell{min-height:120px;background:#0e1520;border:1px solid var(--line);border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;}
     .calCell:hover{border-color:#2f425d}
     .calCell.dim{opacity:.45}
     .calCell .dateRow{display:flex;gap:8px;align-items:center;}
@@ -84,10 +70,7 @@
     .chip.bad{border-color:#7a2840}
     .chips{display:flex;flex-direction:column;gap:6px;overflow:hidden}
 
-    /* modal */
-    .modalBackdrop{
-      position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:70;
-    }
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:70;}
     .modal{width:min(980px,96vw);max-height:90vh;overflow:auto;background:#0e1520;border:1px solid var(--line);border-radius:16px;padding:14px;}
     .modal h3{margin:0;font-size:14px;}
     .split{display:grid;gap:12px;}
@@ -486,6 +469,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const ROOT_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk";
   const AUTO_SYNC_MINUTES = 60;
 
+  // ✅ NEW: JSONP chunking
+  const MAX_B64_CHUNK = 6500; // ปลอดภัยสำหรับ URL ส่วนใหญ่ (รวม callback/params แล้ว)
+
   const SESSION_KEY = "provi_session"; // {user,pass,ymLastSync}
   const DIRTY_KEY_PREFIX = "provi_dirty_"; // per-user
   const KEY_PREFIX = "provi_tracker_v3_";  // per-user
@@ -493,6 +479,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // housekeeping keys
   const LAST_YM_KEY_PREFIX = "provi_lastYm_";      // per-user
   const MONTH_SUMMARY_KEY_PREFIX = "provi_monthSummary_"; // per-user (optional)
+  const LAST_SYNC_AT_KEY_PREFIX = "provi_lastSyncAt_"; // ✅ NEW (per-user)
 
   const $ = (id) => document.getElementById(id);
 
@@ -505,7 +492,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "Update CMDB","Update CMDB (final check)","ทำ F-108","ปิด CR"
   ];
   const STEP_14_IDX = 13;
-  const STEP_21_IDX = 20;
 
   /** ===== session / login ===== */
   function getSession(){
@@ -527,19 +513,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const DIRTY_KEY = DIRTY_KEY_PREFIX + actor;
   const LAST_YM_KEY = LAST_YM_KEY_PREFIX + actor;
   const MONTH_SUMMARY_KEY = MONTH_SUMMARY_KEY_PREFIX + actor;
+  const LAST_SYNC_AT_KEY = LAST_SYNC_AT_KEY_PREFIX + actor;
 
-  /** ===== state =====
-   *  - circuits: เก็บเฉพาะ "งานค้าง" (งานเสร็จแล้วจะถูกเอาออกอัตโนมัติหลัง sync สำเร็จ)
-   *  - logs: เก็บเฉพาะเดือนปัจจุบัน (และจะ clean หลัง sync สำเร็จ)
-   *  - events: เก็บเฉพาะเดือนปัจจุบัน (จะ reset เมื่อขึ้นเดือนใหม่)
-   */
+  function getLastSyncAt(){ return Number(localStorage.getItem(LAST_SYNC_AT_KEY) || "0"); }
+  function setLastSyncAt(ts){ localStorage.setItem(LAST_SYNC_AT_KEY, String(ts || Date.now())); }
+
+  /** ===== state ===== */
   function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
   function save(silent=false){
     localStorage.setItem(KEY, JSON.stringify(state));
     setDirty(true);
     if(!silent) toast("บันทึกแล้ว");
   }
-
   const state = load() || { selectedId:null, circuits:{}, events:[], logs:{} };
 
   /** ===== helpers ===== */
@@ -573,10 +558,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function ensureLogDate(date){ if(!state.logs[date]) state.logs[date]=[]; }
   function touchUpdate(c){ c.lastUpdateDate=todayStr(); c.lastUpdateTime=nowTime(); c.updatedAt=Date.now(); }
   function lastUpdateStamp(c){ return `${c.lastUpdateDate||"-"} ${c.lastUpdateTime||"-"}`; }
+
+  // ✅ PATCH: logId + createdAtMs
   function addLogCircuit(c, action, detail){
     const d=todayStr(), t=nowTime();
     ensureLogDate(d);
     state.logs[d].push({
+      logId: uid("L"),
+      createdAtMs: Date.now(),
       time:t, circuitId:c.id, sof:c.sof, cid:c.cid, type:c.type,
       action, detail,
       remarkSnapshot:(c.remark||"").trim(),
@@ -588,6 +577,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const d=todayStr(), t=nowTime();
     ensureLogDate(d);
     state.logs[d].push({
+      logId: uid("L"),
+      createdAtMs: Date.now(),
       time:t, circuitId:"", sof:"", cid:"", type:"",
       action, detail, remarkSnapshot:"", mSnapshot:"", actor
     });
@@ -605,7 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function isDoneCircuit(c){ return nextStepIndex(c)===null; }
   function getSelected(){ return state.selectedId ? state.circuits[state.selectedId] : null; }
 
-  /** ===== dirty flag (per user) ===== */
+  /** ===== dirty flag ===== */
   function isDirty(){ return localStorage.getItem(DIRTY_KEY)==="1"; }
   function setDirty(v){
     if(v) localStorage.setItem(DIRTY_KEY,"1");
@@ -616,26 +607,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /** ===== Month helpers ===== */
   function ymNowLocal(){
-    // ใช้เวลา local เครื่องผู้ใช้
     const d=new Date();
     const yyyy=d.getFullYear();
     const mm=String(d.getMonth()+1).padStart(2,"0");
     return `${yyyy}-${mm}`;
   }
-  function ymOfDateStr(d){
-    // d = YYYY-MM-DD
-    return String(d||"").slice(0,7);
-  }
+  function ymOfDateStr(d){ return String(d||"").slice(0,7); }
   function monthGuardAutoReset(){
     const nowYm = ymNowLocal();
     const lastYm = localStorage.getItem(LAST_YM_KEY) || "";
     if(lastYm && lastYm !== nowYm){
-      // เดือนเปลี่ยน: reset logs/events (ตามที่คุยไว้)
       state.logs = {};
       state.events = [];
       state.selectedId = null;
       localStorage.setItem(LAST_YM_KEY, nowYm);
-      localStorage.removeItem(MONTH_SUMMARY_KEY); // เผื่อคุณจะใช้ summary อื่น ๆ
+      localStorage.removeItem(MONTH_SUMMARY_KEY);
+      // ✅ reset lastSyncAt ด้วย เพื่อไม่ให้ delta บล็อกข้ามเดือน
+      localStorage.setItem(LAST_SYNC_AT_KEY, "0");
       save(true);
       toast(`ขึ้นเดือนใหม่แล้ว: reset logs/events (${lastYm} → ${nowYm})`);
     }else if(!lastYm){
@@ -654,14 +642,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function isInstallBlocked(dateStr){ return hasAllDay(dateStr); }
 
-  /** ===== Sync payload builders =====
-      NOTE: ส่ง "ข้อมูลดิบ 3 ชีท" เท่านั้น: Logs / Events / Work_Status
-      - Work_Status = snapshot งานค้าง ณ ตอน sync (เพราะงานเสร็จจะหายจากเว็บ)
-  */
-  function buildPayload(){
-    const ym = ymNowLocal();
+  /** ===== Base64 UTF-8 helpers (for chunking) ===== */
+  function toB64Utf8(str){
+    // btoa only supports latin1; convert utf8 safely
+    return btoa(unescape(encodeURIComponent(str)));
+  }
 
-    // Work_Status (unfinished only)
+  /** ===== Sync payload builders ===== */
+  function buildPayload({force=false}={}){
+    const ym = ymNowLocal();
+    const lastSyncAt = getLastSyncAt();
+
+    // Work_Status: snapshot งานค้าง ณ ตอน sync
     const workStatus = Object.values(state.circuits||{})
       .filter(c=>!isDoneCircuit(c))
       .slice()
@@ -687,12 +679,12 @@ document.addEventListener("DOMContentLoaded", () => {
         ];
       });
 
-    // Logs: เดือนนี้เท่านั้น + รวม doneAt
+    // Logs: เดือนนี้ + delta หลัง lastSyncAt (ยกเว้น force)
     const logs = [];
     Object.keys(state.logs||{}).sort().forEach(d=>{
-      const dYm = ymOfDateStr(d);
-      if(dYm !== ym) return; // กันหลุดเดือน
+      if(ymOfDateStr(d) !== ym) return;
       (state.logs[d]||[]).forEach(l=>{
+        if(!force && (l.createdAtMs||0) <= lastSyncAt) return;
         const doneAt = `${d} ${l.time||""}`.trim();
         logs.push([
           ym,
@@ -702,20 +694,21 @@ document.addEventListener("DOMContentLoaded", () => {
           l.sof||"",
           l.cid||"",
           l.type||"",
-          "", // stepNo (ไม่ใช้แล้ว)
-          "", // stepName (ไม่ใช้แล้ว)
+          "",
+          "",
           l.detail||"",
           (l.remarkSnapshot||"").trim(),
           (l.mSnapshot||"").trim(),
-          "", // blockerTag (เผื่ออนาคต)
-          l.logId || "" // เผื่ออนาคต
+          "",
+          l.logId || ""
         ]);
       });
     });
 
-    // Events: เดือนนี้เท่านั้น
+    // Events: เดือนนี้ + delta หลัง lastSyncAt (ยกเว้น force)
     const events = (state.events||[])
       .filter(e=>ymOfDateStr(e.date)===ym)
+      .filter(e=> force ? true : ((e.createdAtMs||0) > lastSyncAt))
       .slice()
       .sort((a,b)=>(a.date||"").localeCompare(b.date||"") || (a.slot||"").localeCompare(b.slot||""))
       .map(e=>[
@@ -728,20 +721,10 @@ document.addEventListener("DOMContentLoaded", () => {
         e.id||""
       ]);
 
-    return {
-      ym,
-      actor,
-      version: "tracker-v3-raw3",
-      logs,
-      events,
-      workStatus
-    };
+    return { ym, actor, version:"tracker-v3-raw3", logs, events, workStatus };
   }
 
-  /** ===== Verify + clean strategy =====
-      - เราจะ "ไม่ clean" จนกว่าจะ verify ได้ว่า server ตอบ ok:true
-      - ใช้ JSONP (script tag) เพื่อหลบ CORS ได้
-  */
+  /** ===== JSONP ===== */
   function jsonp(url){
     return new Promise((resolve, reject)=>{
       const cb = "cb_" + Math.random().toString(16).slice(2);
@@ -749,7 +732,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const timer = setTimeout(()=>{
         cleanup();
         reject(new Error("JSONP_TIMEOUT"));
-      }, 15000);
+      }, 20000);
 
       function cleanup(){
         clearTimeout(timer);
@@ -757,19 +740,45 @@ document.addEventListener("DOMContentLoaded", () => {
         if(script && script.parentNode) script.parentNode.removeChild(script);
       }
 
-      window[cb] = (data)=>{
-        cleanup();
-        resolve(data);
-      };
-
+      window[cb] = (data)=>{ cleanup(); resolve(data); };
       script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
-      script.onerror = ()=>{
-        cleanup();
-        reject(new Error("JSONP_ERROR"));
-      };
-
+      script.onerror = ()=>{ cleanup(); reject(new Error("JSONP_ERROR")); };
       document.head.appendChild(script);
     });
+  }
+
+  /** ===== Chunked sync (fix JSONP_ERROR from long URL) ===== */
+  async function sendPacketChunked(packet){
+    // stringify -> base64 -> split
+    const json = JSON.stringify(packet);
+    const b64 = toB64Utf8(json);
+    const packetId = uid("PKT");
+    const total = Math.ceil(b64.length / MAX_B64_CHUNK);
+
+    for(let i=0;i<total;i++){
+      const chunk = b64.slice(i*MAX_B64_CHUNK, (i+1)*MAX_B64_CHUNK);
+      const url =
+        API_URL +
+        `?mode=syncChunk` +
+        `&packetId=${encodeURIComponent(packetId)}` +
+        `&chunkIndex=${i}` +
+        `&chunkTotal=${total}` +
+        `&chunk=${encodeURIComponent(chunk)}`;
+
+      $("syncStatus").textContent = `Sending chunk ${i+1}/${total}...`;
+      const res = await jsonp(url);
+
+      if(!res || res.ok !== true){
+        throw new Error((res && res.error) ? res.error : "CHUNK_FAILED");
+      }
+
+      // chunk ack; final response will have final:true
+      if(res.final === true){
+        return res;
+      }
+    }
+    // ถ้าหลุดมาถึงนี่ แปลว่าไม่ได้ final
+    throw new Error("NO_FINAL_RESPONSE");
   }
 
   async function sendToScriptVerified({force=false}={}){
@@ -778,15 +787,12 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const payload = buildPayload();
+    const payload = buildPayload({force});
     const packet = { user: sess.user, pass: sess.pass, ym: payload.ym, data: payload };
 
-    $("syncStatus").textContent = "Sending (verified)...";
-
     try{
-      // JSONP GET ไปที่ doGet?payload=
-      const url = API_URL + "?mode=sync" + "&payload=" + encodeURIComponent(JSON.stringify(packet));
-      const res = await jsonp(url);
+      $("syncStatus").textContent = "Sending (chunked JSONP) ...";
+      const res = await sendPacketChunked(packet);
 
       if(!res || res.ok !== true){
         $("syncStatus").textContent = "Sync failed: " + (res && res.error ? res.error : "unknown");
@@ -794,26 +800,19 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // ✅ verified ok => clean localStorage ตามที่คุย
-      // 1) remove DONE circuits from web
+      // ✅ verified ok => mark last sync time
+      setLastSyncAt(Date.now());
+
+      // ✅ clean local
       const before = Object.keys(state.circuits||{}).length;
       for(const id of Object.keys(state.circuits||{})){
         const c = state.circuits[id];
-        if(c && isDoneCircuit(c)){
-          delete state.circuits[id];
-        }
+        if(c && isDoneCircuit(c)) delete state.circuits[id];
       }
       const after = Object.keys(state.circuits||{}).length;
 
-      // 2) clean logs เก่า: เหลือเฉพาะเดือนนี้ (จริง ๆ เราเก็บเดือนนี้อยู่แล้ว) + อาจล้างทั้งหมดก็ได้
-      // ตามที่คุย: "หลัง Sync สำเร็จ → ล้าง logs เก่าใน localStorage เหลือเฉพาะงานค้าง + สรุปเดือนนี้"
-      // => ล้าง logs ทั้งหมด (เพราะใน Sheet แล้ว) แต่คุณยังมี "summary เดือนนี้" ใน UI จาก circuits งานค้างอยู่
+      // logs: clear after successful sync (อยู่ใน Sheet แล้ว)
       state.logs = {};
-
-      // 3) events: เรา "ยังเก็บเดือนนี้ไว้" (เพื่อให้ calendar ยังอยู่) หรือจะล้างก็ได้
-      // ตามที่คุย: "เดือนใหม่ค่อย reset" => ไม่ล้าง events ตอน sync ปกติ
-      // state.events = state.events; // no-op
-
       state.selectedId = null;
       save(true);
 
@@ -854,8 +853,6 @@ document.addEventListener("DOMContentLoaded", () => {
   /** ===== init static UI ===== */
   $("todayPill").textContent = `วันนี้: ${todayStr()}`;
   $("logDate").value = todayStr();
-
-  // calendar dow row
   const dows = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   $("calDowRow").innerHTML = dows.map(d=>`<div class="calDow">${d}</div>`).join("");
 
@@ -910,7 +907,6 @@ document.addEventListener("DOMContentLoaded", () => {
     switchRightTab("detail");
   });
 
-  // detail panels
   $("btnToggleMeta").addEventListener("click", ()=>{
     const p=$("metaPanel");
     p.style.display = (p.style.display==="none") ? "" : "none";
@@ -1001,7 +997,6 @@ document.addEventListener("DOMContentLoaded", () => {
     switchRightTab("dashboard");
   });
 
-  // Daily
   $("logDate").addEventListener("change", renderDaily);
   $("logCircuit").addEventListener("change", renderDaily);
 
@@ -1062,7 +1057,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const ev = { id: uid("E"), date: modalDay, slot, title, note };
+    // ✅ PATCH: createdAtMs
+    const ev = { id: uid("E"), date: modalDay, slot, title, note, createdAtMs: Date.now() };
     state.events.push(ev);
     addLogSystem("EVENT_ADD", `${modalDay} ${slot} ${title}${note?` (${note})`:``}`);
     save(true);
@@ -1076,12 +1072,10 @@ document.addEventListener("DOMContentLoaded", () => {
   /** ===== Header actions ===== */
   $("btnSync").addEventListener("click", ()=>sendToScriptVerified({force:false}));
   $("btnForce").addEventListener("click", ()=>sendToScriptVerified({force:true}));
-  $("btnOpenDrive").addEventListener("click", ()=>{
-    window.open(`https://drive.google.com/drive/folders/${ROOT_FOLDER_ID}`, "_blank");
-  });
+  $("btnOpenDrive").addEventListener("click", ()=>{ window.open(`https://drive.google.com/drive/folders/${ROOT_FOLDER_ID}`, "_blank"); });
 
   /** ===== render ===== */
-  function renderAll(silent=false){
+  function renderAll(){
     setDirty(isDirty());
     renderKpi();
     renderCircuitList();
