@@ -781,50 +781,114 @@ document.addEventListener("DOMContentLoaded", () => {
     throw new Error("NO_FINAL_RESPONSE");
   }
 
-  async function sendToScriptVerified({force=false}={}){
-    if(!force && !isDirty()){
-      $("syncStatus").textContent = "Skip: not dirty";
-      return;
+function b64UrlEncodeUtf8(str){
+  const b64 = btoa(unescape(encodeURIComponent(str)));
+  return b64.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function jsonpGet(paramsObj){
+  const qs = Object.keys(paramsObj)
+    .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(paramsObj[k])}`)
+    .join("&");
+  return jsonp(API_URL + "?" + qs);
+}
+function chunkRows(rows, perBatch){
+  const out=[];
+  for(let i=0;i<rows.length;i+=perBatch) out.push(rows.slice(i,i+perBatch));
+  return out;
+}
+
+async function sendToScriptVerified({force=false}={}){
+  if(!force && !isDirty()){
+    $("syncStatus").textContent = "Skip: not dirty";
+    return;
+  }
+
+  const payload = buildPayload();
+  const ym = payload.ym;
+
+  try{
+    $("syncStatus").textContent = "Init sync ...";
+
+    // 1) INIT
+    const initRes = await jsonpGet({
+      mode: "syncInit",
+      user: sess.user,
+      pass: sess.pass,
+      ym
+    });
+    if(!initRes || initRes.ok !== true || !initRes.syncId){
+      throw new Error((initRes && initRes.error) ? initRes.error : "INIT_FAIL");
+    }
+    const syncId = initRes.syncId;
+
+    // 2) WORK_STATUS (ส่งทีเดียว)
+    $("syncStatus").textContent = "Sending Work_Status ...";
+    {
+      const pack = { rows: payload.workStatus };
+      const res = await jsonpGet({
+        mode:"syncBatch",
+        syncId,
+        part:"work",
+        data: b64UrlEncodeUtf8(JSON.stringify(pack))
+      });
+      if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "WORK_FAIL");
     }
 
-    const payload = buildPayload({force});
-    const packet = { user: sess.user, pass: sess.pass, ym: payload.ym, data: payload };
-
-    try{
-      $("syncStatus").textContent = "Sending (chunked JSONP) ...";
-      const res = await sendPacketChunked(packet);
-
-      if(!res || res.ok !== true){
-        $("syncStatus").textContent = "Sync failed: " + (res && res.error ? res.error : "unknown");
-        toast("Sync ไม่สำเร็จ (verify fail)");
-        return;
-      }
-
-      // ✅ verified ok => mark last sync time
-      setLastSyncAt(Date.now());
-
-      // ✅ clean local
-      const before = Object.keys(state.circuits||{}).length;
-      for(const id of Object.keys(state.circuits||{})){
-        const c = state.circuits[id];
-        if(c && isDoneCircuit(c)) delete state.circuits[id];
-      }
-      const after = Object.keys(state.circuits||{}).length;
-
-      // logs: clear after successful sync (อยู่ใน Sheet แล้ว)
-      state.logs = {};
-      state.selectedId = null;
-      save(true);
-
-      setDirty(false);
-      $("syncStatus").textContent = `Sent ✅ (${payload.ym}) — verified + cleaned (done:${before-after})`;
-      toast(`Sync สำเร็จ + clean แล้ว (ลบงานเสร็จ ${before-after})`);
-      renderAll(true);
-
-    }catch(e){
-      $("syncStatus").textContent = "Sync failed: " + (e.message || e);
-      toast("Sync ไม่สำเร็จ");
+    // 3) LOGS (แบ่งแบตช์)
+    const logBatches = chunkRows(payload.logs, 20); // ถ้าอยากเร็วขึ้นค่อยปรับ 30
+    for(let i=0;i<logBatches.length;i++){
+      $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
+      const pack = { rows: logBatches[i] };
+      const res = await jsonpGet({
+        mode:"syncBatch",
+        syncId,
+        part:"logs",
+        data: b64UrlEncodeUtf8(JSON.stringify(pack))
+      });
+      if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
     }
+
+    // 4) EVENTS
+    const eventBatches = chunkRows(payload.events, 30);
+    for(let i=0;i<eventBatches.length;i++){
+      $("syncStatus").textContent = `Sending events ${i+1}/${eventBatches.length} ...`;
+      const pack = { rows: eventBatches[i] };
+      const res = await jsonpGet({
+        mode:"syncBatch",
+        syncId,
+        part:"events",
+        data: b64UrlEncodeUtf8(JSON.stringify(pack))
+      });
+      if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "EVENTS_FAIL");
+    }
+
+    // 5) FINISH
+    $("syncStatus").textContent = "Finishing ...";
+    const finRes = await jsonpGet({ mode:"syncFinish", syncId });
+    if(!finRes || finRes.ok !== true) throw new Error(finRes && finRes.error ? finRes.error : "FINISH_FAIL");
+
+    // ✅ clean local (เหมือนเดิม)
+    const before = Object.keys(state.circuits||{}).length;
+    for(const id of Object.keys(state.circuits||{})){
+      const c = state.circuits[id];
+      if(c && isDoneCircuit(c)) delete state.circuits[id];
+    }
+    const after = Object.keys(state.circuits||{}).length;
+
+    state.logs = {};
+    state.selectedId = null;
+    save(true);
+
+    setDirty(false);
+    $("syncStatus").textContent = `Sent ✅ (${ym}) — batch sync OK (done:${before-after})`;
+    toast(`Sync สำเร็จ + clean แล้ว (ลบงานเสร็จ ${before-after})`);
+    renderAll(true);
+
+  }catch(e){
+    $("syncStatus").textContent = "Sync failed: " + (e.message || e);
+    toast("Sync ไม่สำเร็จ");
+  }
+}
   }
 
   function startAutoSync(){
