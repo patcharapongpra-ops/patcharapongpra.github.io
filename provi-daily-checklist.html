@@ -866,6 +866,7 @@ async function sendToScriptVerified({force=false}={}){
     $("syncStatus").textContent = "Finishing ...";
     const finRes = await jsonpGet({ mode:"syncFinish", syncId });
     if(!finRes || finRes.ok !== true) throw new Error(finRes && finRes.error ? finRes.error : "FINISH_FAIL");
+    setLastSyncAt(Date.now());
 
     // ✅ clean local (เหมือนเดิม)
     const before = Object.keys(state.circuits||{}).length;
@@ -889,8 +890,6 @@ async function sendToScriptVerified({force=false}={}){
     toast("Sync ไม่สำเร็จ");
   }
 }
-  }
-
   function startAutoSync(){
     setInterval(async ()=>{
       try{
