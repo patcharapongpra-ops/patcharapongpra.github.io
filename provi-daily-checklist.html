@@ -1,4 +1,4 @@
-<!-- provi-daily-checklist.html (UPDATED: JSONP chunk + delta sync + logId/event createdAtMs) -->
+<!-- provi-daily-checklist.html (FIXED: stepId-based + migrate + batch sync + braces fixed) -->
 <!doctype html>
 <html lang="th">
 <head>
@@ -469,50 +469,42 @@ document.addEventListener("DOMContentLoaded", () => {
   const ROOT_FOLDER_ID = "1sxBCtzxb7J_Hkw_9o_klPkQHHXLyMtIk";
   const AUTO_SYNC_MINUTES = 60;
 
-  // ✅ NEW: JSONP chunking
-  const MAX_B64_CHUNK = 6500; // ปลอดภัยสำหรับ URL ส่วนใหญ่ (รวม callback/params แล้ว)
-
-  const SESSION_KEY = "provi_session"; // {user,pass,ymLastSync}
+  const SESSION_KEY = "provi_session"; // {user,pass}
   const DIRTY_KEY_PREFIX = "provi_dirty_"; // per-user
   const KEY_PREFIX = "provi_tracker_v3_";  // per-user
 
-  // housekeeping keys
   const LAST_YM_KEY_PREFIX = "provi_lastYm_";      // per-user
   const MONTH_SUMMARY_KEY_PREFIX = "provi_monthSummary_"; // per-user (optional)
-  const LAST_SYNC_AT_KEY_PREFIX = "provi_lastSyncAt_"; // ✅ NEW (per-user)
+  const LAST_SYNC_AT_KEY_PREFIX = "provi_lastSyncAt_"; // per-user
 
   const $ = (id) => document.getElementById(id);
 
-  /** ===== steps (ID-based, safe to reorder/add/remove without losing user data) ===== */
-const STEPS = [
-  { id:"S01_BOOK_SID", name:"จอง SID" },
-  { id:"S02_CMDB_CREATE", name:"สร้าง SID บน CMDB" },
-  { id:"S03_CREATE_DRIVE_FOLDER", name:"สร้าง Folder ไดฟ์กลาง" },
-  { id:"S04_OPEN_TASKS", name:"เปิด Task ไปแผนกที่เกี่ยวข้อง" },
-  { id:"S05_SEND_MAIL_REQ", name:"ส่งเมลคิวงาน/สรุป requirement ให้ครบ" },
-  { id:"S06_CHECK_STOCK", name:"เช็ค stock / เบิกของ" },
-  { id:"S07_PREP_CONFIG", name:"เตรียม config ตามวงจร" },
-  { id:"S08_CONFIG_DEVICE", name:"คอนฟิกอุปกรณ์ให้พร้อม" },
-  { id:"S09_DO_147", name:"ทำ 147" },
-  { id:"S10_CONFIG_NODE", name:"คอนฟิก Node" },
-  { id:"S11_SHAPE_BW", name:"Shape Bandwidth" },
-  { id:"S12_ZABBIX_SMS", name:"Add Zabbix + SMS Alert (ถ้า SOF ระบุ)" },
-  { id:"S13_ADD_GRAPH", name:"Add Graph" },
-  { id:"S14_PLAN_INSTALL", name:"เช็คแผนวันติดตั้ง + นัดผู้รับเหมารับอุปกรณ์" },
-  { id:"S15_INSTALL_MAIL", name:"ติดตั้ง ส่งเมลให้ลูกค้า" },
-  { id:"S16_CLOSE_SR", name:"ปิด SR" },
-  { id:"S17_UPDATE_INV", name:"Update Inventory" },
-  { id:"S18_UPDATE_CMDB", name:"Update CMDB" },
-  { id:"S19_UPDATE_CMDB_FINAL", name:"Update CMDB (final check)" },
-  { id:"S20_F108", name:"ทำ F-108" },
-  { id:"S21_CLOSE_CR", name:"ปิด CR" }
-];
-
-// ใช้ตรวจเตือน "ใกล้วันติดตั้งแล้วแต่ยังไม่ถึง step 14"
-const STEP_14_ID = "S14_PLAN_INSTALL";
-
-// สำหรับ migration จากของเก่าแบบ index (ต้องตรงลำดับเดิม 21 ข้อ)
-const LEGACY_STEP_IDS = STEPS.map(s=>s.id);
+  /** ===== steps (ID-based) ===== */
+  const STEPS = [
+    { id:"S01_BOOK_SID", name:"จอง SID" },
+    { id:"S02_CMDB_CREATE", name:"สร้าง SID บน CMDB" },
+    { id:"S03_CREATE_DRIVE_FOLDER", name:"สร้าง Folder ไดฟ์กลาง" },
+    { id:"S04_OPEN_TASKS", name:"เปิด Task ไปแผนกที่เกี่ยวข้อง" },
+    { id:"S05_SEND_MAIL_REQ", name:"ส่งเมลคิวงาน/สรุป requirement ให้ครบ" },
+    { id:"S06_CHECK_STOCK", name:"เช็ค stock / เบิกของ" },
+    { id:"S07_PREP_CONFIG", name:"เตรียม config ตามวงจร" },
+    { id:"S08_CONFIG_DEVICE", name:"คอนฟิกอุปกรณ์ให้พร้อม" },
+    { id:"S09_DO_147", name:"ทำ 147" },
+    { id:"S10_CONFIG_NODE", name:"คอนฟิก Node" },
+    { id:"S11_SHAPE_BW", name:"Shape Bandwidth" },
+    { id:"S12_ZABBIX_SMS", name:"Add Zabbix + SMS Alert (ถ้า SOF ระบุ)" },
+    { id:"S13_ADD_GRAPH", name:"Add Graph" },
+    { id:"S14_PLAN_INSTALL", name:"เช็คแผนวันติดตั้ง + นัดผู้รับเหมารับอุปกรณ์" },
+    { id:"S15_INSTALL_MAIL", name:"ติดตั้ง ส่งเมลให้ลูกค้า" },
+    { id:"S16_CLOSE_SR", name:"ปิด SR" },
+    { id:"S17_UPDATE_INV", name:"Update Inventory" },
+    { id:"S18_UPDATE_CMDB", name:"Update CMDB" },
+    { id:"S19_UPDATE_CMDB_FINAL", name:"Update CMDB (final check)" },
+    { id:"S20_F108", name:"ทำ F-108" },
+    { id:"S21_CLOSE_CR", name:"ปิด CR" }
+  ];
+  const STEP_14_ID = "S14_PLAN_INSTALL";
+  const LEGACY_STEP_IDS = STEPS.map(s=>s.id);
 
   /** ===== session / login ===== */
   function getSession(){
@@ -541,51 +533,8 @@ const LEGACY_STEP_IDS = STEPS.map(s=>s.id);
 
   /** ===== state ===== */
   function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
-  function save(silent=false){
-    localStorage.setItem(KEY, JSON.stringify(state));
-    setDirty(true);
-    if(!silent) toast("บันทึกแล้ว");
-  }
   const state = load() || { selectedId:null, circuits:{}, events:[], logs:{} };
 
-  /** ===== migrate old stepsDone[index] -> stepsDoneById[stepId] (run once per circuit) ===== */
-function migrateStepsToIdOnce(){
-  let changed = false;
-  for(const c of Object.values(state.circuits||{})){
-    if(!c) continue;
-
-    // ถ้ามีแบบใหม่แล้ว ข้าม
-    if(c.stepsDoneById) continue;
-
-    // สร้าง container ใหม่
-    c.stepsDoneById = {};
-
-    // ถ้ามีของเก่าแบบ index ให้ย้ายมา
-    if(c.stepsDone && typeof c.stepsDone === "object"){
-      for(const k of Object.keys(c.stepsDone)){
-        const idx = Number(k);
-        const stepId = LEGACY_STEP_IDS[idx];
-        if(!stepId) continue;
-        const v = c.stepsDone[k];
-        if(v && typeof v === "object"){
-          c.stepsDoneById[stepId] = { done: !!v.done, date: v.date || "" };
-        }
-      }
-      changed = true;
-    }
-
-    // ไม่ลบทิ้งก็ได้ แต่แนะนำลบทิ้งกันงง
-    // delete c.stepsDone;
-  }
-
-  if(changed){
-    save(true); // silent save
-    toast("migrate checklist -> stepId (ok)");
-  }
-}
-migrateStepsToIdOnce();
-
-  /** ===== helpers ===== */
   function toast(msg){
     const t=$("toast");
     t.textContent=msg;
@@ -593,6 +542,42 @@ migrateStepsToIdOnce();
     clearTimeout(toast._t);
     toast._t=setTimeout(()=>t.style.display="none",1400);
   }
+  function save(silent=false){
+    localStorage.setItem(KEY, JSON.stringify(state));
+    setDirty(true);
+    if(!silent) toast("บันทึกแล้ว");
+  }
+
+  /** ===== migrate old stepsDone[index] -> stepsDoneById[stepId] (once) ===== */
+  function migrateStepsToIdOnce(){
+    let changed = false;
+    for(const c of Object.values(state.circuits||{})){
+      if(!c) continue;
+      if(c.stepsDoneById) continue;
+
+      c.stepsDoneById = {};
+
+      if(c.stepsDone && typeof c.stepsDone === "object"){
+        for(const k of Object.keys(c.stepsDone)){
+          const idx = Number(k);
+          const stepId = LEGACY_STEP_IDS[idx];
+          if(!stepId) continue;
+          const v = c.stepsDone[k];
+          if(v && typeof v === "object"){
+            c.stepsDoneById[stepId] = { done: !!v.done, date: v.date || "" };
+          }
+        }
+        changed = true;
+      }
+    }
+    if(changed){
+      save(true);
+      toast("migrate checklist -> stepId (ok)");
+    }
+  }
+  migrateStepsToIdOnce();
+
+  /** ===== helpers ===== */
   function uid(prefix="X"){ return prefix + Math.random().toString(16).slice(2) + Date.now().toString(16); }
   function isoDate(d){
     const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
@@ -617,52 +602,26 @@ migrateStepsToIdOnce();
   function touchUpdate(c){ c.lastUpdateDate=todayStr(); c.lastUpdateTime=nowTime(); c.updatedAt=Date.now(); }
   function lastUpdateStamp(c){ return `${c.lastUpdateDate||"-"} ${c.lastUpdateTime||"-"}`; }
 
-  // ✅ PATCH: logId + createdAtMs
-  function addLogCircuit(c, action, detail){
-    const d=todayStr(), t=nowTime();
-    ensureLogDate(d);
-    state.logs[d].push({
-      logId: uid("L"),
-      createdAtMs: Date.now(),
-      time:t, circuitId:c.id, sof:c.sof, cid:c.cid, type:c.type,
-      action, detail,
-      remarkSnapshot:(c.remark||"").trim(),
-      mSnapshot:(c.m||"").trim(),
-      actor
-    });
-  }
-  function addLogSystem(action, detail){
-    const d=todayStr(), t=nowTime();
-    ensureLogDate(d);
-    state.logs[d].push({
-      logId: uid("L"),
-      createdAtMs: Date.now(),
-      time:t, circuitId:"", sof:"", cid:"", type:"",
-      action, detail, remarkSnapshot:"", mSnapshot:"", actor
-    });
-  }
-
   function isStepDone(c, stepId){
-  return !!(c.stepsDoneById && c.stepsDoneById[stepId] && c.stepsDoneById[stepId].done);
-}
-function percentOf(c){
-  const total = STEPS.length;
-  const doneCount = STEPS.reduce((a,s)=>a+(isStepDone(c,s.id)?1:0),0);
-  return total ? Math.round((doneCount/total)*100) : 0;
-}
-function nextStepObj(c){
-  for(const s of STEPS){
-    if(!isStepDone(c,s.id)) return s;
+    return !!(c.stepsDoneById && c.stepsDoneById[stepId] && c.stepsDoneById[stepId].done);
   }
-  return null;
-}
-function nextStepIndex(c){
-  const n = nextStepObj(c);
-  if(!n) return null;
-  return STEPS.findIndex(s=>s.id===n.id);
-}
-function isDoneCircuit(c){ return nextStepObj(c)===null; }
-
+  function percentOf(c){
+    const total = STEPS.length;
+    const doneCount = STEPS.reduce((a,s)=>a+(isStepDone(c,s.id)?1:0),0);
+    return total ? Math.round((doneCount/total)*100) : 0;
+  }
+  function nextStepObj(c){
+    for(const s of STEPS){
+      if(!isStepDone(c,s.id)) return s;
+    }
+    return null;
+  }
+  function nextStepIndex(c){
+    const n = nextStepObj(c);
+    if(!n) return null;
+    return STEPS.findIndex(s=>s.id===n.id);
+  }
+  function isDoneCircuit(c){ return nextStepObj(c)===null; }
   function getSelected(){ return state.selectedId ? state.circuits[state.selectedId] : null; }
 
   /** ===== dirty flag ===== */
@@ -691,7 +650,6 @@ function isDoneCircuit(c){ return nextStepObj(c)===null; }
       state.selectedId = null;
       localStorage.setItem(LAST_YM_KEY, nowYm);
       localStorage.removeItem(MONTH_SUMMARY_KEY);
-      // ✅ reset lastSyncAt ด้วย เพื่อไม่ให้ delta บล็อกข้ามเดือน
       localStorage.setItem(LAST_SYNC_AT_KEY, "0");
       save(true);
       toast(`ขึ้นเดือนใหม่แล้ว: reset logs/events (${lastYm} → ${nowYm})`);
@@ -711,18 +669,36 @@ function isDoneCircuit(c){ return nextStepObj(c)===null; }
   }
   function isInstallBlocked(dateStr){ return hasAllDay(dateStr); }
 
-  /** ===== Base64 UTF-8 helpers (for chunking) ===== */
-  function toB64Utf8(str){
-    // btoa only supports latin1; convert utf8 safely
-    return btoa(unescape(encodeURIComponent(str)));
+  /** ===== logs ===== */
+  function addLogCircuit(c, action, detail){
+    const d=todayStr(), t=nowTime();
+    ensureLogDate(d);
+    state.logs[d].push({
+      logId: uid("L"),
+      createdAtMs: Date.now(),
+      time:t, circuitId:c.id, sof:c.sof, cid:c.cid, type:c.type,
+      action, detail,
+      remarkSnapshot:(c.remark||"").trim(),
+      mSnapshot:(c.m||"").trim(),
+      actor
+    });
+  }
+  function addLogSystem(action, detail){
+    const d=todayStr(), t=nowTime();
+    ensureLogDate(d);
+    state.logs[d].push({
+      logId: uid("L"),
+      createdAtMs: Date.now(),
+      time:t, circuitId:"", sof:"", cid:"", type:"",
+      action, detail, remarkSnapshot:"", mSnapshot:"", actor
+    });
   }
 
-  /** ===== Sync payload builders ===== */
+  /** ===== Sync payload ===== */
   function buildPayload({force=false}={}){
     const ym = ymNowLocal();
     const lastSyncAt = getLastSyncAt();
 
-    // Work_Status: snapshot งานค้าง ณ ตอน sync
     const workStatus = Object.values(state.circuits||{})
       .filter(c=>!isDoneCircuit(c))
       .slice()
@@ -740,7 +716,7 @@ function isDoneCircuit(c){ return nextStepObj(c)===null; }
           pct,
           lastUpdateStamp(c),
           (nxt===null? "" : (nxt+1)),
-          (nxt===null? "DONE" : STEPS[nxt]),
+          (nxt===null? "DONE" : (STEPS[nxt] ? STEPS[nxt].name : "")),
           c.installDate||"",
           (c.installNote||"").trim(),
           (c.remark||"").trim(),
@@ -748,7 +724,6 @@ function isDoneCircuit(c){ return nextStepObj(c)===null; }
         ];
       });
 
-    // Logs: เดือนนี้ + delta หลัง lastSyncAt (ยกเว้น force)
     const logs = [];
     Object.keys(state.logs||{}).sort().forEach(d=>{
       if(ymOfDateStr(d) !== ym) return;
@@ -774,7 +749,6 @@ function isDoneCircuit(c){ return nextStepObj(c)===null; }
       });
     });
 
-    // Events: เดือนนี้ + delta หลัง lastSyncAt (ยกเว้น force)
     const events = (state.events||[])
       .filter(e=>ymOfDateStr(e.date)===ym)
       .filter(e=> force ? true : ((e.createdAtMs||0) > lastSyncAt))
@@ -793,7 +767,7 @@ function isDoneCircuit(c){ return nextStepObj(c)===null; }
     return { ym, actor, version:"tracker-v3-raw3", logs, events, workStatus };
   }
 
-  /** ===== JSONP ===== */
+  /** ===== JSONP + batch sync ===== */
   function jsonp(url){
     return new Promise((resolve, reject)=>{
       const cb = "cb_" + Math.random().toString(16).slice(2);
@@ -816,149 +790,110 @@ function isDoneCircuit(c){ return nextStepObj(c)===null; }
     });
   }
 
-  /** ===== Chunked sync (fix JSONP_ERROR from long URL) ===== */
-  async function sendPacketChunked(packet){
-    // stringify -> base64 -> split
-    const json = JSON.stringify(packet);
-    const b64 = toB64Utf8(json);
-    const packetId = uid("PKT");
-    const total = Math.ceil(b64.length / MAX_B64_CHUNK);
+  function b64UrlEncodeUtf8(str){
+    const b64 = btoa(unescape(encodeURIComponent(str)));
+    return b64.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }
+  function jsonpGet(paramsObj){
+    const qs = Object.keys(paramsObj)
+      .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(paramsObj[k])}`)
+      .join("&");
+    return jsonp(API_URL + "?" + qs);
+  }
+  function chunkRows(rows, perBatch){
+    const out=[];
+    for(let i=0;i<rows.length;i+=perBatch) out.push(rows.slice(i,i+perBatch));
+    return out;
+  }
 
-    for(let i=0;i<total;i++){
-      const chunk = b64.slice(i*MAX_B64_CHUNK, (i+1)*MAX_B64_CHUNK);
-      const url =
-        API_URL +
-        `?mode=syncChunk` +
-        `&packetId=${encodeURIComponent(packetId)}` +
-        `&chunkIndex=${i}` +
-        `&chunkTotal=${total}` +
-        `&chunk=${encodeURIComponent(chunk)}`;
+  async function sendToScriptVerified({force=false}={}){
+    if(!force && !isDirty()){
+      $("syncStatus").textContent = "Skip: not dirty";
+      return;
+    }
 
-      $("syncStatus").textContent = `Sending chunk ${i+1}/${total}...`;
-      const res = await jsonp(url);
+    const payload = buildPayload({force});
+    const ym = payload.ym;
 
-      if(!res || res.ok !== true){
-        throw new Error((res && res.error) ? res.error : "CHUNK_FAILED");
+    try{
+      $("syncStatus").textContent = "Init sync ...";
+
+      const initRes = await jsonpGet({
+        mode: "syncInit",
+        user: sess.user,
+        pass: sess.pass,
+        ym
+      });
+      if(!initRes || initRes.ok !== true || !initRes.syncId){
+        throw new Error((initRes && initRes.error) ? initRes.error : "INIT_FAIL");
+      }
+      const syncId = initRes.syncId;
+
+      $("syncStatus").textContent = "Sending Work_Status ...";
+      {
+        const pack = { rows: payload.workStatus };
+        const res = await jsonpGet({
+          mode:"syncBatch",
+          syncId,
+          part:"work",
+          data: b64UrlEncodeUtf8(JSON.stringify(pack))
+        });
+        if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "WORK_FAIL");
       }
 
-      // chunk ack; final response will have final:true
-      if(res.final === true){
-        return res;
+      const logBatches = chunkRows(payload.logs, 20);
+      for(let i=0;i<logBatches.length;i++){
+        $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
+        const pack = { rows: logBatches[i] };
+        const res = await jsonpGet({
+          mode:"syncBatch",
+          syncId,
+          part:"logs",
+          data: b64UrlEncodeUtf8(JSON.stringify(pack))
+        });
+        if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
       }
+
+      const eventBatches = chunkRows(payload.events, 30);
+      for(let i=0;i<eventBatches.length;i++){
+        $("syncStatus").textContent = `Sending events ${i+1}/${eventBatches.length} ...`;
+        const pack = { rows: eventBatches[i] };
+        const res = await jsonpGet({
+          mode:"syncBatch",
+          syncId,
+          part:"events",
+          data: b64UrlEncodeUtf8(JSON.stringify(pack))
+        });
+        if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "EVENTS_FAIL");
+      }
+
+      $("syncStatus").textContent = "Finishing ...";
+      const finRes = await jsonpGet({ mode:"syncFinish", syncId });
+      if(!finRes || finRes.ok !== true) throw new Error(finRes && finRes.error ? finRes.error : "FINISH_FAIL");
+      setLastSyncAt(Date.now());
+
+      const before = Object.keys(state.circuits||{}).length;
+      for(const id of Object.keys(state.circuits||{})){
+        const c = state.circuits[id];
+        if(c && isDoneCircuit(c)) delete state.circuits[id];
+      }
+      const after = Object.keys(state.circuits||{}).length;
+
+      state.logs = {};
+      state.selectedId = null;
+      save(true);
+
+      setDirty(false);
+      $("syncStatus").textContent = `Sent ✅ (${ym}) — batch sync OK (done:${before-after})`;
+      toast(`Sync สำเร็จ + clean แล้ว (ลบงานเสร็จ ${before-after})`);
+      renderAll(true);
+
+    }catch(e){
+      $("syncStatus").textContent = "Sync failed: " + (e.message || e);
+      toast("Sync ไม่สำเร็จ");
     }
-    // ถ้าหลุดมาถึงนี่ แปลว่าไม่ได้ final
-    throw new Error("NO_FINAL_RESPONSE");
   }
 
-function b64UrlEncodeUtf8(str){
-  const b64 = btoa(unescape(encodeURIComponent(str)));
-  return b64.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-function jsonpGet(paramsObj){
-  const qs = Object.keys(paramsObj)
-    .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(paramsObj[k])}`)
-    .join("&");
-  return jsonp(API_URL + "?" + qs);
-}
-function chunkRows(rows, perBatch){
-  const out=[];
-  for(let i=0;i<rows.length;i+=perBatch) out.push(rows.slice(i,i+perBatch));
-  return out;
-}
-
-async function sendToScriptVerified({force=false}={}){
-  if(!force && !isDirty()){
-    $("syncStatus").textContent = "Skip: not dirty";
-    return;
-  }
-
-  const payload = buildPayload();
-  const ym = payload.ym;
-
-  try{
-    $("syncStatus").textContent = "Init sync ...";
-
-    // 1) INIT
-    const initRes = await jsonpGet({
-      mode: "syncInit",
-      user: sess.user,
-      pass: sess.pass,
-      ym
-    });
-    if(!initRes || initRes.ok !== true || !initRes.syncId){
-      throw new Error((initRes && initRes.error) ? initRes.error : "INIT_FAIL");
-    }
-    const syncId = initRes.syncId;
-
-    // 2) WORK_STATUS (ส่งทีเดียว)
-    $("syncStatus").textContent = "Sending Work_Status ...";
-    {
-      const pack = { rows: payload.workStatus };
-      const res = await jsonpGet({
-        mode:"syncBatch",
-        syncId,
-        part:"work",
-        data: b64UrlEncodeUtf8(JSON.stringify(pack))
-      });
-      if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "WORK_FAIL");
-    }
-
-    // 3) LOGS (แบ่งแบตช์)
-    const logBatches = chunkRows(payload.logs, 20); // ถ้าอยากเร็วขึ้นค่อยปรับ 30
-    for(let i=0;i<logBatches.length;i++){
-      $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
-      const pack = { rows: logBatches[i] };
-      const res = await jsonpGet({
-        mode:"syncBatch",
-        syncId,
-        part:"logs",
-        data: b64UrlEncodeUtf8(JSON.stringify(pack))
-      });
-      if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
-    }
-
-    // 4) EVENTS
-    const eventBatches = chunkRows(payload.events, 30);
-    for(let i=0;i<eventBatches.length;i++){
-      $("syncStatus").textContent = `Sending events ${i+1}/${eventBatches.length} ...`;
-      const pack = { rows: eventBatches[i] };
-      const res = await jsonpGet({
-        mode:"syncBatch",
-        syncId,
-        part:"events",
-        data: b64UrlEncodeUtf8(JSON.stringify(pack))
-      });
-      if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "EVENTS_FAIL");
-    }
-
-    // 5) FINISH
-    $("syncStatus").textContent = "Finishing ...";
-    const finRes = await jsonpGet({ mode:"syncFinish", syncId });
-    if(!finRes || finRes.ok !== true) throw new Error(finRes && finRes.error ? finRes.error : "FINISH_FAIL");
-    setLastSyncAt(Date.now());
-
-    // ✅ clean local (เหมือนเดิม)
-    const before = Object.keys(state.circuits||{}).length;
-    for(const id of Object.keys(state.circuits||{})){
-      const c = state.circuits[id];
-      if(c && isDoneCircuit(c)) delete state.circuits[id];
-    }
-    const after = Object.keys(state.circuits||{}).length;
-
-    state.logs = {};
-    state.selectedId = null;
-    save(true);
-
-    setDirty(false);
-    $("syncStatus").textContent = `Sent ✅ (${ym}) — batch sync OK (done:${before-after})`;
-    toast(`Sync สำเร็จ + clean แล้ว (ลบงานเสร็จ ${before-after})`);
-    renderAll(true);
-
-  }catch(e){
-    $("syncStatus").textContent = "Sync failed: " + (e.message || e);
-    toast("Sync ไม่สำเร็จ");
-  }
-}
   function startAutoSync(){
     setInterval(async ()=>{
       try{
@@ -978,7 +913,10 @@ async function sendToScriptVerified({force=false}={}){
     rDetail.style.display = name==="detail" ? "" : "none";
     rDaily.style.display = name==="daily" ? "" : "none";
     rCal.style.display = name==="calendar" ? "" : "none";
-    $("rightTitle").textContent = name==="dashboard" ? "Dashboard" : name==="detail" ? "Circuit Detail" : name==="daily" ? "Daily Log" : "Calendar";
+    $("rightTitle").textContent =
+      name==="dashboard" ? "Dashboard" :
+      name==="detail" ? "Circuit Detail" :
+      name==="daily" ? "Daily Log" : "Calendar";
     renderAll(true);
   }
 
@@ -988,7 +926,7 @@ async function sendToScriptVerified({force=false}={}){
   const dows = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   $("calDowRow").innerHTML = dows.map(d=>`<div class="calDow">${d}</div>`).join("");
 
-  /** ===== events bindings ===== */
+  /** ===== bindings ===== */
   tabsRight.forEach(b=> b.addEventListener("click", ()=> switchRightTab(b.dataset.rtab)));
   $("btnGoDashboard").addEventListener("click", ()=> switchRightTab("dashboard"));
 
@@ -1189,7 +1127,6 @@ async function sendToScriptVerified({force=false}={}){
       return;
     }
 
-    // ✅ PATCH: createdAtMs
     const ev = { id: uid("E"), date: modalDay, slot, title, note, createdAtMs: Date.now() };
     state.events.push(ev);
     addLogSystem("EVENT_ADD", `${modalDay} ${slot} ${title}${note?` (${note})`:``}`);
@@ -1205,6 +1142,26 @@ async function sendToScriptVerified({force=false}={}){
   $("btnSync").addEventListener("click", ()=>sendToScriptVerified({force:false}));
   $("btnForce").addEventListener("click", ()=>sendToScriptVerified({force:true}));
   $("btnOpenDrive").addEventListener("click", ()=>{ window.open(`https://drive.google.com/drive/folders/${ROOT_FOLDER_ID}`, "_blank"); });
+
+  /** ===== Checklist toggle ===== */
+  function toggleStepById(circuitId, stepId, checked){
+    const c = state.circuits[circuitId]; if(!c) return;
+    if(!c.stepsDoneById) c.stepsDoneById = {};
+    if(!c.stepsDoneById[stepId]) c.stepsDoneById[stepId] = { done:false, date:"" };
+
+    c.stepsDoneById[stepId].done = checked;
+    c.stepsDoneById[stepId].date = checked ? todayStr() : "";
+
+    touchUpdate(c);
+
+    const idx = STEPS.findIndex(s=>s.id===stepId);
+    const label = idx>=0 ? `${idx+1}. ${STEPS[idx].name}` : stepId;
+
+    addLogCircuit(c, checked ? "STEP_CHECK" : "STEP_UNCHECK", label);
+    save(true);
+    toast(checked ? "ติ๊กเพิ่ม + ลง log แล้ว" : "ยกเลิกติ๊ก + ลง log แล้ว");
+    renderAll(true);
+  }
 
   /** ===== render ===== */
   function renderAll(){
@@ -1254,7 +1211,9 @@ async function sendToScriptVerified({force=false}={}){
     $("circuitList").innerHTML = list.map(c=>{
       const pct=percentOf(c);
       const nxt=nextStepIndex(c);
-      const nxtText=nxt===null?"เสร็จแล้ว (จะหายหลัง sync)":"ถัดไป: " + `${nxt+1}. ${STEPS[nxt]}`;
+      const nxtText = (nxt===null)
+        ? "เสร็จแล้ว (จะหายหลัง sync)"
+        : `ถัดไป: ${nxt+1}. ${(STEPS[nxt] ? STEPS[nxt].name : "")}`;
       const remark=(c.remark||"").trim();
       const m=(c.m||"").trim();
       const installTxt = c.installDate ? c.installDate : "-";
@@ -1311,7 +1270,7 @@ async function sendToScriptVerified({force=false}={}){
     $("overviewTable").innerHTML = circuits.slice(0,18).map(c=>{
       const pct=percentOf(c);
       const nxt=nextStepIndex(c);
-      const nxtText=nxt===null?"DONE":`${nxt+1}. ${STEPS[nxt]}`;
+      const nxtText = (nxt===null) ? "DONE" : `${nxt+1}. ${(STEPS[nxt] ? STEPS[nxt].name : "")}`;
       const remark=(c.remark||"").trim();
       const install = c.installDate ? c.installDate : "-";
       return `
@@ -1396,48 +1355,28 @@ async function sendToScriptVerified({force=false}={}){
       return `<div>• <span class="mono">${escapeHtml(r.date)} ${escapeHtml(r.time)}</span> — <span class="mono">${escapeHtml(r.action)}</span> ${escapeHtml(r.detail||"")} <span class="muted small">(${escapeHtml(r.actor||"")})</span></div>`;
     }).join("") : `<span class="muted">ยังไม่มี log</span>`;
 
-$("steps").innerHTML = STEPS.map((s, idx)=>{
-  const done = isStepDone(c, s.id);
-  const date = done ? ((c.stepsDoneById[s.id] && c.stepsDoneById[s.id].date) || "-") : "";
-  const tag = (s.id===STEP_14_ID) ? `<span class="pill warn">ใช้ใน Alerts</span>` : "";
-  return `
-    <div class="step">
-      <input type="checkbox" data-stepid="${s.id}" ${done?"checked":""} />
-      <div style="flex:1;">
-        <div class="name">${idx+1}. ${escapeHtml(s.name)} ${tag}</div>
-        ${done?`<div class="done">ทำแล้ววันที่: <span class="mono">${escapeHtml(date)}</span></div>`:`<div class="done muted">ยังไม่ทำ</div>`}
-      </div>
-    </div>
-  `;
-}).join("");
+    $("steps").innerHTML = STEPS.map((s, idx)=>{
+      const done = isStepDone(c, s.id);
+      const date = done ? ((c.stepsDoneById[s.id] && c.stepsDoneById[s.id].date) || "-") : "";
+      const tag = (s.id===STEP_14_ID) ? `<span class="pill warn">ใช้ใน Alerts</span>` : "";
+      return `
+        <div class="step">
+          <input type="checkbox" data-stepid="${s.id}" ${done?"checked":""} />
+          <div style="flex:1;">
+            <div class="name">${idx+1}. ${escapeHtml(s.name)} ${tag}</div>
+            ${done?`<div class="done">ทำแล้ววันที่: <span class="mono">${escapeHtml(date)}</span></div>`:`<div class="done muted">ยังไม่ทำ</div>`}
+          </div>
+        </div>
+      `;
+    }).join("");
 
-$("steps").querySelectorAll("input[type=checkbox][data-stepid]").forEach(cb=>{
-  cb.addEventListener("change", ()=>{
-    const stepId = cb.dataset.stepid;
-    toggleStepById(c.id, stepId, cb.checked);
-  });
-});
-
-
-function toggleStepById(id, stepId, checked){
-  const c = state.circuits[id]; if(!c) return;
-  if(!c.stepsDoneById) c.stepsDoneById = {};
-  if(!c.stepsDoneById[stepId]) c.stepsDoneById[stepId] = { done:false, date:"" };
-
-  c.stepsDoneById[stepId].done = checked;
-  c.stepsDoneById[stepId].date = checked ? todayStr() : "";
-
-  touchUpdate(c);
-
-  const idx = STEPS.findIndex(s=>s.id===stepId);
-  const label = idx>=0 ? `${idx+1}. ${STEPS[idx].name}` : stepId;
-
-  addLogCircuit(c, checked ? "STEP_CHECK" : "STEP_UNCHECK", label);
-  save(true);
-  toast(checked ? "ติ๊กเพิ่ม + ลง log แล้ว" : "ยกเลิกติ๊ก + ลง log แล้ว");
-  renderAll(true);
-}
-
+    $("steps").querySelectorAll("input[type=checkbox][data-stepid]").forEach(cb=>{
+      cb.addEventListener("change", ()=>{
+        const stepId = cb.dataset.stepid;
+        toggleStepById(c.id, stepId, cb.checked);
+      });
+    });
+  }
 
   function renderDailyCircuitOptions(){
     const sel=$("logCircuit");
@@ -1470,7 +1409,7 @@ function toggleStepById(id, stepId, checked){
     }).join("") || `<tr><td colspan="9" class="muted">ไม่มี log ในวันนี้</td></tr>`;
   }
 
-  /** ===== Calendar render + modal ===== */
+  /** ===== Calendar ===== */
   function monthName(d){ return d.toLocaleString("en-US",{month:"long", year:"numeric"}); }
 
   function renderCalendar(){
@@ -1630,7 +1569,6 @@ function toggleStepById(id, stepId, checked){
     if(hasAllDay(modalDay)) ruleText = "มี ALL แล้ว → เพิ่มเช้า/บ่ายไม่ได้ + เพิ่ม Install ไม่ได้";
     else if(hasSlot(modalDay,"AM") && hasSlot(modalDay,"PM")) ruleText = "มีเช้า+บ่ายแล้ว → เพิ่มเต็มวันไม่ได้";
     else ruleText = "เพิ่มได้ตามกติกา (AM/PM เพิ่มได้คนละช่วง)";
-
     $("dayEventRuleHint").textContent = ruleText;
 
     $("dayEventList").innerHTML = evs.length ? evs.map(e=>{
