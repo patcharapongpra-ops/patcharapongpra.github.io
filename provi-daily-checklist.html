@@ -483,15 +483,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const $ = (id) => document.getElementById(id);
 
-  /** ===== steps ===== */
-  const STEPS = [
-    "จอง SID","สร้าง SID บน CMDB","สร้าง Folder ไดฟ์กลาง","เปิด Task ไปแผนกที่เกี่ยวข้อง",
-    "ส่งเมลคิวงาน/สรุป requirement ให้ครบ","เช็ค stock / เบิกของ","เตรียม config ตามวงจร","คอนฟิกอุปกรณ์ให้พร้อม",
-    "ทำ 147","คอนฟิก Node","Shape Bandwidth","Add Zabbix + SMS Alert (ถ้า SOF ระบุ)","Add Graph",
-    "เช็คแผนวันติดตั้ง + นัดผู้รับเหมารับอุปกรณ์","ติดตั้ง ส่งเมลให้ลูกค้า","ปิด SR","Update Inventory",
-    "Update CMDB","Update CMDB (final check)","ทำ F-108","ปิด CR"
-  ];
-  const STEP_14_IDX = 13;
+  /** ===== steps (ID-based, safe to reorder/add/remove without losing user data) ===== */
+const STEPS = [
+  { id:"S01_BOOK_SID", name:"จอง SID" },
+  { id:"S02_CMDB_CREATE", name:"สร้าง SID บน CMDB" },
+  { id:"S03_CREATE_DRIVE_FOLDER", name:"สร้าง Folder ไดฟ์กลาง" },
+  { id:"S04_OPEN_TASKS", name:"เปิด Task ไปแผนกที่เกี่ยวข้อง" },
+  { id:"S05_SEND_MAIL_REQ", name:"ส่งเมลคิวงาน/สรุป requirement ให้ครบ" },
+  { id:"S06_CHECK_STOCK", name:"เช็ค stock / เบิกของ" },
+  { id:"S07_PREP_CONFIG", name:"เตรียม config ตามวงจร" },
+  { id:"S08_CONFIG_DEVICE", name:"คอนฟิกอุปกรณ์ให้พร้อม" },
+  { id:"S09_DO_147", name:"ทำ 147" },
+  { id:"S10_CONFIG_NODE", name:"คอนฟิก Node" },
+  { id:"S11_SHAPE_BW", name:"Shape Bandwidth" },
+  { id:"S12_ZABBIX_SMS", name:"Add Zabbix + SMS Alert (ถ้า SOF ระบุ)" },
+  { id:"S13_ADD_GRAPH", name:"Add Graph" },
+  { id:"S14_PLAN_INSTALL", name:"เช็คแผนวันติดตั้ง + นัดผู้รับเหมารับอุปกรณ์" },
+  { id:"S15_INSTALL_MAIL", name:"ติดตั้ง ส่งเมลให้ลูกค้า" },
+  { id:"S16_CLOSE_SR", name:"ปิด SR" },
+  { id:"S17_UPDATE_INV", name:"Update Inventory" },
+  { id:"S18_UPDATE_CMDB", name:"Update CMDB" },
+  { id:"S19_UPDATE_CMDB_FINAL", name:"Update CMDB (final check)" },
+  { id:"S20_F108", name:"ทำ F-108" },
+  { id:"S21_CLOSE_CR", name:"ปิด CR" }
+];
+
+// ใช้ตรวจเตือน "ใกล้วันติดตั้งแล้วแต่ยังไม่ถึง step 14"
+const STEP_14_ID = "S14_PLAN_INSTALL";
+
+// สำหรับ migration จากของเก่าแบบ index (ต้องตรงลำดับเดิม 21 ข้อ)
+const LEGACY_STEP_IDS = STEPS.map(s=>s.id);
 
   /** ===== session / login ===== */
   function getSession(){
@@ -526,6 +547,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!silent) toast("บันทึกแล้ว");
   }
   const state = load() || { selectedId:null, circuits:{}, events:[], logs:{} };
+
+  /** ===== migrate old stepsDone[index] -> stepsDoneById[stepId] (run once per circuit) ===== */
+function migrateStepsToIdOnce(){
+  let changed = false;
+  for(const c of Object.values(state.circuits||{})){
+    if(!c) continue;
+
+    // ถ้ามีแบบใหม่แล้ว ข้าม
+    if(c.stepsDoneById) continue;
+
+    // สร้าง container ใหม่
+    c.stepsDoneById = {};
+
+    // ถ้ามีของเก่าแบบ index ให้ย้ายมา
+    if(c.stepsDone && typeof c.stepsDone === "object"){
+      for(const k of Object.keys(c.stepsDone)){
+        const idx = Number(k);
+        const stepId = LEGACY_STEP_IDS[idx];
+        if(!stepId) continue;
+        const v = c.stepsDone[k];
+        if(v && typeof v === "object"){
+          c.stepsDoneById[stepId] = { done: !!v.done, date: v.date || "" };
+        }
+      }
+      changed = true;
+    }
+
+    // ไม่ลบทิ้งก็ได้ แต่แนะนำลบทิ้งกันงง
+    // delete c.stepsDone;
+  }
+
+  if(changed){
+    save(true); // silent save
+    toast("migrate checklist -> stepId (ok)");
+  }
+}
+migrateStepsToIdOnce();
 
   /** ===== helpers ===== */
   function toast(msg){
@@ -584,16 +642,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function isStepDone(c, idx){ return !!(c.stepsDone && c.stepsDone[idx] && c.stepsDone[idx].done); }
-  function percentOf(c){
-    const doneCount = STEPS.reduce((a,_,i)=>a+(isStepDone(c,i)?1:0),0);
-    return Math.round((doneCount/STEPS.length)*100);
+  function isStepDone(c, stepId){
+  return !!(c.stepsDoneById && c.stepsDoneById[stepId] && c.stepsDoneById[stepId].done);
+}
+function percentOf(c){
+  const total = STEPS.length;
+  const doneCount = STEPS.reduce((a,s)=>a+(isStepDone(c,s.id)?1:0),0);
+  return total ? Math.round((doneCount/total)*100) : 0;
+}
+function nextStepObj(c){
+  for(const s of STEPS){
+    if(!isStepDone(c,s.id)) return s;
   }
-  function nextStepIndex(c){
-    for(let i=0;i<STEPS.length;i++) if(!isStepDone(c,i)) return i;
-    return null;
-  }
-  function isDoneCircuit(c){ return nextStepIndex(c)===null; }
+  return null;
+}
+function nextStepIndex(c){
+  const n = nextStepObj(c);
+  if(!n) return null;
+  return STEPS.findIndex(s=>s.id===n.id);
+}
+function isDoneCircuit(c){ return nextStepObj(c)===null; }
+
   function getSelected(){ return state.selectedId ? state.circuits[state.selectedId] : null; }
 
   /** ===== dirty flag ===== */
@@ -953,7 +1022,7 @@ async function sendToScriptVerified({force=false}={}){
       createdAt: todayStr(),
       lastUpdateDate: todayStr(),
       lastUpdateTime: nowTime(),
-      stepsDone:{},
+      stepsDoneById:{},
       installDate:"",
       installNote:"",
       updatedAt: Date.now()
@@ -1327,41 +1396,48 @@ async function sendToScriptVerified({force=false}={}){
       return `<div>• <span class="mono">${escapeHtml(r.date)} ${escapeHtml(r.time)}</span> — <span class="mono">${escapeHtml(r.action)}</span> ${escapeHtml(r.detail||"")} <span class="muted small">(${escapeHtml(r.actor||"")})</span></div>`;
     }).join("") : `<span class="muted">ยังไม่มี log</span>`;
 
-    $("steps").innerHTML = STEPS.map((name, idx)=>{
-      const done=isStepDone(c,idx);
-      const date=done?(c.stepsDone[idx].date||"-"):"";
-      const tag = idx===STEP_14_IDX ? `<span class="pill warn">ใช้ใน Alerts</span>` : "";
-      return `
-        <div class="step">
-          <input type="checkbox" data-step="${idx}" ${done?"checked":""} />
-          <div style="flex:1;">
-            <div class="name">${idx+1}. ${escapeHtml(name)} ${tag}</div>
-            ${done?`<div class="done">ทำแล้ววันที่: <span class="mono">${escapeHtml(date)}</span></div>`:`<div class="done muted">ยังไม่ทำ</div>`}
-          </div>
-        </div>
-      `;
-    }).join("");
+$("steps").innerHTML = STEPS.map((s, idx)=>{
+  const done = isStepDone(c, s.id);
+  const date = done ? ((c.stepsDoneById[s.id] && c.stepsDoneById[s.id].date) || "-") : "";
+  const tag = (s.id===STEP_14_ID) ? `<span class="pill warn">ใช้ใน Alerts</span>` : "";
+  return `
+    <div class="step">
+      <input type="checkbox" data-stepid="${s.id}" ${done?"checked":""} />
+      <div style="flex:1;">
+        <div class="name">${idx+1}. ${escapeHtml(s.name)} ${tag}</div>
+        ${done?`<div class="done">ทำแล้ววันที่: <span class="mono">${escapeHtml(date)}</span></div>`:`<div class="done muted">ยังไม่ทำ</div>`}
+      </div>
+    </div>
+  `;
+}).join("");
 
-    $("steps").querySelectorAll("input[type=checkbox][data-step]").forEach(cb=>{
-      cb.addEventListener("change", ()=>{
-        const idx=Number(cb.dataset.step);
-        toggleStep(c.id, idx, cb.checked);
-      });
-    });
-  }
+$("steps").querySelectorAll("input[type=checkbox][data-stepid]").forEach(cb=>{
+  cb.addEventListener("change", ()=>{
+    const stepId = cb.dataset.stepid;
+    toggleStepById(c.id, stepId, cb.checked);
+  });
+});
 
-  function toggleStep(id, idx, checked){
-    const c=state.circuits[id]; if(!c) return;
-    if(!c.stepsDone) c.stepsDone={};
-    if(!c.stepsDone[idx]) c.stepsDone[idx]={done:false,date:""};
-    c.stepsDone[idx].done=checked;
-    c.stepsDone[idx].date=checked?todayStr():"";
-    touchUpdate(c);
-    addLogCircuit(c, checked?"STEP_CHECK":"STEP_UNCHECK", `${idx+1}. ${STEPS[idx]}`);
-    save(true);
-    toast(checked?"ติ๊กเพิ่ม + ลง log แล้ว":"ยกเลิกติ๊ก + ลง log แล้ว");
-    renderAll(true);
-  }
+
+function toggleStepById(id, stepId, checked){
+  const c = state.circuits[id]; if(!c) return;
+  if(!c.stepsDoneById) c.stepsDoneById = {};
+  if(!c.stepsDoneById[stepId]) c.stepsDoneById[stepId] = { done:false, date:"" };
+
+  c.stepsDoneById[stepId].done = checked;
+  c.stepsDoneById[stepId].date = checked ? todayStr() : "";
+
+  touchUpdate(c);
+
+  const idx = STEPS.findIndex(s=>s.id===stepId);
+  const label = idx>=0 ? `${idx+1}. ${STEPS[idx].name}` : stepId;
+
+  addLogCircuit(c, checked ? "STEP_CHECK" : "STEP_UNCHECK", label);
+  save(true);
+  toast(checked ? "ติ๊กเพิ่ม + ลง log แล้ว" : "ยกเลิกติ๊ก + ลง log แล้ว");
+  renderAll(true);
+}
+
 
   function renderDailyCircuitOptions(){
     const sel=$("logCircuit");
@@ -1440,7 +1516,7 @@ async function sendToScriptVerified({force=false}={}){
         .sort((a,b)=>(a.cid||"").localeCompare(b.cid||""))
         .slice(0,4)
         .map(c=>{
-          const step14 = isStepDone(c, STEP_14_IDX);
+          const step14 = isStepDone(c, STEP_14_ID);
           const cls = step14 ? "install" : "install bad";
           const warn = step14 ? "" : `<span class="mono badTxt">⚠</span>`;
           return `<div class="chip ${cls}">${warn}<span class="mono">${escapeHtml(c.cid)}</span><span>${escapeHtml(c.name)}</span></div>`;
