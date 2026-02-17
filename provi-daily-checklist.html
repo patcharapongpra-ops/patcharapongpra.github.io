@@ -1,4 +1,4 @@
-<!-- provi-daily-checklist.html (FIXED: stepId-based + migrate + batch sync + braces fixed) -->
+<!-- provi-daily-checklist.html (FULL: merged patches: recover old key + no month wipe + fix batch sync logs/events + smaller chunk) -->
 <!doctype html>
 <html lang="th">
 <head>
@@ -531,10 +531,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function getLastSyncAt(){ return Number(localStorage.getItem(LAST_SYNC_AT_KEY) || "0"); }
   function setLastSyncAt(ts){ localStorage.setItem(LAST_SYNC_AT_KEY, String(ts || Date.now())); }
 
-  /** ===== state ===== */
-  function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
-  const state = load() || { selectedId:null, circuits:{}, events:[], logs:{} };
-
+  /** ===== toast / save ===== */
   function toast(msg){
     const t=$("toast");
     t.textContent=msg;
@@ -542,6 +539,46 @@ document.addEventListener("DOMContentLoaded", () => {
     clearTimeout(toast._t);
     toast._t=setTimeout(()=>t.style.display="none",1400);
   }
+
+  /** ===== state (with recovery patch) ===== */
+  function loadByKey(k){
+    try{ return JSON.parse(localStorage.getItem(k)); }catch{ return null; }
+  }
+  function load(){ return loadByKey(KEY); }
+
+  // กู้ข้อมูลจาก key เก่า ถ้า KEY ปัจจุบันว่าง
+  function recoverFromOldKeysIfEmpty(){
+    const curRaw = localStorage.getItem(KEY) || "";
+    if(curRaw && curRaw.length > 50) return false;
+
+    const keys = Object.keys(localStorage).filter(k=>{
+      if(k === KEY) return false;
+      return k.startsWith("provi_tracker") && k.includes(actor);
+    });
+    if(!keys.length) return false;
+
+    let bestKey = "";
+    let bestLen = 0;
+    for(const k of keys){
+      const v = localStorage.getItem(k) || "";
+      if(v.length > bestLen){
+        bestLen = v.length;
+        bestKey = k;
+      }
+    }
+    if(!bestKey || bestLen < 50) return false;
+
+    localStorage.setItem(KEY, localStorage.getItem(bestKey));
+    console.log("[RECOVER]", bestKey, "=>", KEY);
+    toast("กู้ข้อมูลจาก key เก่าแล้ว ✅ (reload)");
+    setTimeout(()=>location.reload(), 400);
+    return true;
+  }
+
+  let state = load() || { selectedId:null, circuits:{}, events:[], logs:{} };
+  recoverFromOldKeysIfEmpty(); // ถ้ากู้ได้จะ reload เอง
+  state = load() || state;
+
   function save(silent=false){
     localStorage.setItem(KEY, JSON.stringify(state));
     setDirty(true);
@@ -633,7 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("dirtyPill").classList.toggle("warn", isDirty());
   }
 
-  /** ===== Month helpers ===== */
+  /** ===== Month helpers (NO WIPE PATCH) ===== */
   function ymNowLocal(){
     const d=new Date();
     const yyyy=d.getFullYear();
@@ -645,14 +682,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const nowYm = ymNowLocal();
     const lastYm = localStorage.getItem(LAST_YM_KEY) || "";
     if(lastYm && lastYm !== nowYm){
-      state.logs = {};
-      state.events = [];
+      // เดิมล้าง logs/events ทำให้เหมือนข้อมูลหาย -> ปรับเป็นไม่ล้าง
       state.selectedId = null;
       localStorage.setItem(LAST_YM_KEY, nowYm);
       localStorage.removeItem(MONTH_SUMMARY_KEY);
-      localStorage.setItem(LAST_SYNC_AT_KEY, "0");
       save(true);
-      toast(`ขึ้นเดือนใหม่แล้ว: reset logs/events (${lastYm} → ${nowYm})`);
+      toast(`ขึ้นเดือนใหม่แล้ว: ไม่ล้างข้อมูล (${lastYm} → ${nowYm})`);
     }else if(!lastYm){
       localStorage.setItem(LAST_YM_KEY, nowYm);
     }
@@ -800,36 +835,35 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("&");
     return jsonp(API_URL + "?" + qs);
   }
-function packB64Url(rows){
-  // ห่อแบบเดียวกับที่ส่งอยู่
-  const pack = { rows };
-  const b64 = b64UrlEncodeUtf8(JSON.stringify(pack));
-  return b64;
-}
 
-// แบ่ง rows ให้แต่ละ batch มี data ไม่ยาวเกิน limitChars
-function chunkRowsByB64Size(rows, limitChars=4500){
-  const out=[];
-  let cur=[];
-  for(const r of rows){
-    const test = cur.concat([r]);
-    const b64 = packB64Url(test);
-    if(b64.length > limitChars){
-      if(cur.length===0){
-        // แถวเดี่ยวก็ยังยาวเกิน -> ต้องตัดข้อความใน row นั้น (ดู patch ด้านล่าง)
-        out.push([r]);
-        cur=[];
-      }else{
-        out.push(cur);
-        cur=[r];
-      }
-    }else{
-      cur=test;
-    }
+  function packB64Url(rows){
+    const pack = { rows };
+    return b64UrlEncodeUtf8(JSON.stringify(pack));
   }
-  if(cur.length) out.push(cur);
-  return out;
-}
+
+  // ลด limit เพื่อกัน URL ยาวเกิน (ช่วยลด JSONP_ERROR)
+  function chunkRowsByB64Size(rows, limitChars=3200){
+    const out=[];
+    let cur=[];
+    for(const r of rows){
+      const test = cur.concat([r]);
+      const b64 = packB64Url(test);
+      if(b64.length > limitChars){
+        if(cur.length===0){
+          out.push([r]);
+          cur=[];
+        }else{
+          out.push(cur);
+          cur=[r];
+        }
+      }else{
+        cur=test;
+      }
+    }
+    if(cur.length) out.push(cur);
+    return out;
+  }
+
   async function sendToScriptVerified({force=false}={}){
     if(!force && !isDirty()){
       $("syncStatus").textContent = "Skip: not dirty";
@@ -865,33 +899,33 @@ function chunkRowsByB64Size(rows, limitChars=4500){
         if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "WORK_FAIL");
       }
 
-      const logBatches = chunkRowsByB64Size(payload.logs, 4500);
+      // ===== send logs (FIX) =====
+      const logBatches = chunkRowsByB64Size(payload.logs, 3200);
       for(let i=0;i<logBatches.length;i++){
-  $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
-  const data = packB64Url(logBatches[i]);
-  const res = await jsonpGet({
-    mode:"syncBatch",
-    syncId,
-    part:"logs",
-    data
-  });
-  if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
-}
+        $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
+        const data = packB64Url(logBatches[i]);
+        const res = await jsonpGet({
+          mode:"syncBatch",
+          syncId,
+          part:"logs",
+          data
+        });
+        if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
+      }
 
-
-      const logBatches = chunkRowsByB64Size(payload.events, 4500);
-for(let i=0;i<logBatches.length;i++){
-  $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
-  const data = packB64Url(logBatches[i]);
-  const res = await jsonpGet({
-    mode:"syncBatch",
-    syncId,
-    part:"logs",
-    data
-  });
-  if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
-}
-
+      // ===== send events (FIX) =====
+      const eventBatches = chunkRowsByB64Size(payload.events, 3200);
+      for(let i=0;i<eventBatches.length;i++){
+        $("syncStatus").textContent = `Sending events ${i+1}/${eventBatches.length} ...`;
+        const data = packB64Url(eventBatches[i]);
+        const res = await jsonpGet({
+          mode:"syncBatch",
+          syncId,
+          part:"events",
+          data
+        });
+        if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "EVENTS_FAIL");
+      }
 
       $("syncStatus").textContent = "Finishing ...";
       const finRes = await jsonpGet({ mode:"syncFinish", syncId });
@@ -905,7 +939,8 @@ for(let i=0;i<logBatches.length;i++){
       }
       const after = Object.keys(state.circuits||{}).length;
 
-      state.logs = {};
+      // ไม่ล้าง logs ทั้งหมด (กัน “หาย”) — แต่อาจจะอยากล้างเฉพาะเดือนนี้ก็ได้
+      // state.logs = {};  // ปิดไว้
       state.selectedId = null;
       save(true);
 
