@@ -800,12 +800,36 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("&");
     return jsonp(API_URL + "?" + qs);
   }
-  function chunkRows(rows, perBatch){
-    const out=[];
-    for(let i=0;i<rows.length;i+=perBatch) out.push(rows.slice(i,i+perBatch));
-    return out;
-  }
+function packB64Url(rows){
+  // ห่อแบบเดียวกับที่ส่งอยู่
+  const pack = { rows };
+  const b64 = b64UrlEncodeUtf8(JSON.stringify(pack));
+  return b64;
+}
 
+// แบ่ง rows ให้แต่ละ batch มี data ไม่ยาวเกิน limitChars
+function chunkRowsByB64Size(rows, limitChars=4500){
+  const out=[];
+  let cur=[];
+  for(const r of rows){
+    const test = cur.concat([r]);
+    const b64 = packB64Url(test);
+    if(b64.length > limitChars){
+      if(cur.length===0){
+        // แถวเดี่ยวก็ยังยาวเกิน -> ต้องตัดข้อความใน row นั้น (ดู patch ด้านล่าง)
+        out.push([r]);
+        cur=[];
+      }else{
+        out.push(cur);
+        cur=[r];
+      }
+    }else{
+      cur=test;
+    }
+  }
+  if(cur.length) out.push(cur);
+  return out;
+}
   async function sendToScriptVerified({force=false}={}){
     if(!force && !isDirty()){
       $("syncStatus").textContent = "Skip: not dirty";
@@ -841,31 +865,33 @@ document.addEventListener("DOMContentLoaded", () => {
         if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "WORK_FAIL");
       }
 
-      const logBatches = chunkRows(payload.logs, 20);
+      const logBatches = chunkRowsByB64Size(payload.logs, 4500);
       for(let i=0;i<logBatches.length;i++){
-        $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
-        const pack = { rows: logBatches[i] };
-        const res = await jsonpGet({
-          mode:"syncBatch",
-          syncId,
-          part:"logs",
-          data: b64UrlEncodeUtf8(JSON.stringify(pack))
-        });
-        if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
-      }
+  $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
+  const data = packB64Url(logBatches[i]);
+  const res = await jsonpGet({
+    mode:"syncBatch",
+    syncId,
+    part:"logs",
+    data
+  });
+  if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
+}
 
-      const eventBatches = chunkRows(payload.events, 30);
-      for(let i=0;i<eventBatches.length;i++){
-        $("syncStatus").textContent = `Sending events ${i+1}/${eventBatches.length} ...`;
-        const pack = { rows: eventBatches[i] };
-        const res = await jsonpGet({
-          mode:"syncBatch",
-          syncId,
-          part:"events",
-          data: b64UrlEncodeUtf8(JSON.stringify(pack))
-        });
-        if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "EVENTS_FAIL");
-      }
+
+      const logBatches = chunkRowsByB64Size(payload.events, 4500);
+for(let i=0;i<logBatches.length;i++){
+  $("syncStatus").textContent = `Sending logs ${i+1}/${logBatches.length} ...`;
+  const data = packB64Url(logBatches[i]);
+  const res = await jsonpGet({
+    mode:"syncBatch",
+    syncId,
+    part:"logs",
+    data
+  });
+  if(!res || res.ok !== true) throw new Error(res && res.error ? res.error : "LOGS_FAIL");
+}
+
 
       $("syncStatus").textContent = "Finishing ...";
       const finRes = await jsonpGet({ mode:"syncFinish", syncId });
