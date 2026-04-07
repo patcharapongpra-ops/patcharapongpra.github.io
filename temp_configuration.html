@@ -1104,7 +1104,7 @@ ntp server source-interface all enable
 y
 
 ntp authentication enable
-ntp authentication-keyid 6 authentication-mode md5 cipher ${"9IPjtW@ilGmFWn|Q\\".replaceAll("/", "\\/")}
+ntp authentication-keyid 6 authentication-mode md5 cipher 9IPjtW@ilGmFWn|Q\\303
 ntp trusted authentication-keyid 6
 ntp unicast-server 10.20.1.100 authentication-keyid 6 vpn-instance __dcn_vpn__ source-interface  LoopBack1 preferred 
 
