@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jastel Config Converter v2</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Tahoma, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    .desc { margin-bottom: 20px; color: #555; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    textarea, pre {
+      width: 100%;
+      min-height: 560px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: pre;
+      overflow: auto;
+      background: #fafafa;
+    }
+    textarea {
+      resize: vertical;
+      background: #fff;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+    }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: bold;
+      background: #0f62fe;
+      color: white;
+    }
+    button.secondary { background: #555; }
+    button.danger { background: #c62828; }
+    .note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #666;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #0b6b0b;
+      min-height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Jastel Config Converter v2</h1>
+    <div class="desc">วางข้อมูลดิบด้านซ้าย แล้วกด Convert เพื่อแปลงเป็น format มาตรฐาน</div>
+
+    <div class="grid">
+      <div class="panel">
+        <label for="input">Input</label>
+        <textarea id="input" spellcheck="false" placeholder="วางข้อมูลที่นี่..."></textarea>
+
+        <div class="buttons">
+          <button onclick="convert()">Convert</button>
+          <button class="secondary" onclick="loadSample1()">Sample /31</button>
+          <button class="secondary" onclick="loadSample2()">Sample 2 WAN</button>
+          <button class="danger" onclick="clearAll()">Clear</button>
+        </div>
+
+        <div class="note">
+          รองรับ GigabitEthernet, GE, 10GE, Community, Loopback, WAN ip, LAN Public ip, /29, /30, /31, gateway หลายรูปแบบ และ WAN block หลายชุด
+        </div>
+      </div>
+
+      <div class="panel">
+        <label for="output">Output</label>
+        <pre id="output"></pre>
+
+        <div class="buttons">
+          <button onclick="copyOutput()">Copy Output</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function cleanLine(line) {
+  return line
+    .replace(/^\s*-\s*/, '')
+    .replace(/\t/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function ipToNum(ip) {
+  return ip.split('.').reduce((n, p) => ((n << 8) + Number(p)) >>> 0, 0) >>> 0;
+}
+
+function numToIp(num) {
+  return [
+    (num >>> 24) & 255,
+    (num >>> 16) & 255,
+    (num >>> 8) & 255,
+    num & 255
+  ].join('.');
+}
+
+function cidrInfo(cidr) {
+  const [ip, prefixStr] = cidr.trim().split('/');
+  const prefix = Number(prefixStr);
+  const maskNum = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+  const networkNum = ipToNum(ip) & maskNum;
+  const broadcastNum = networkNum | (~maskNum >>> 0);
+  const usableLastOffset = Math.max(1, broadcastNum - networkNum - 1);
+
+  return {
+    prefix,
+    networkNum,
+    broadcastNum,
+    network: `${numToIp(networkNum)}/${prefix}`,
+    mask: numToIp(maskNum),
+    usableLastOffset,
+    ip(offset) {
+      return numToIp(networkNum + offset);
+    },
+    host(offset) {
+      return `${numToIp(networkNum + offset)}/${prefix}`;
+    }
+  };
+}
+
+function peer31(cidr) {
+  const [ip, prefix] = cidr.split('/');
+  if (Number(prefix) !== 31) return '';
+  const n = ipToNum(ip);
+  return `${numToIp((n % 2 === 0) ? n + 1 : n - 1)}/31`;
+}
+
+function normalizeDeviceName(name) {
+  return name
+    .replace(/#\d+-\d+$/i, '')
+    .replace(/#\d+$/i, '')
+    .replace(/_?\s*gateway$/i, '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+}
+
+function normalizeInterface(line) {
+  line = cleanLine(line).replace(/^~/, '');
+
+  const m = line.match(/^(.*?)-(10GE|GigabitEthernet|GE)(\d.*)$/i);
+  if (!m) return null;
+
+  const device = normalizeDeviceName(m[1]);
+  let type = m[2].toUpperCase();
+  const port = m[3].trim();
+
+  if (type === 'GIGABITETHERNET') type = 'GE';
+
+  return {
+    device,
+    text: `${device} ${type}${port}`
+  };
+}
+
+function parseInput(raw) {
+  const lines = raw.split(/\r?\n/).map(cleanLine).filter(Boolean);
+
+  const data = {
+    customer: '',
+    interfaces: [],
+    community: [],
+    loopback: '',
+    wanSwitchBlocks: [],
+    wanPublic: '',
+    lanPublic: ''
+  };
+
+  let currentWan = null;
+
+  for (const line of lines) {
+    const intf = normalizeInterface(line);
+    if (intf) {
+      data.interfaces.push(intf);
+      continue;
+    }
+
+    let customer = line.match(/^(C\d+)\s*:?\s*(.+)$/i);
+    if (customer) {
+      data.customer = `${customer[1]} ${customer[2].trim()}`;
+      continue;
+    }
+
+    let comm = line.match(/Community\s*\((.*?)\)\s*:?\s*([\d,\s]+)/i);
+    if (comm) {
+      const routers = comm[1].split(',').map(x => x.trim()).filter(Boolean);
+      const vals = comm[2].split(',').map(x => x.trim()).filter(Boolean);
+
+      routers.forEach((r, i) => {
+        data.community.push({
+          router: r,
+          value: vals[i] || vals[0]
+        });
+      });
+      continue;
+    }
+
+    let loop = line.match(/Loopback\s*SW\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (loop) {
+      data.loopback = loop[1];
+      continue;
+    }
+
+    let wanPublic = line.match(/WAN\s*ip\s*\/\d+\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (wanPublic) {
+      data.wanPublic = wanPublic[1];
+      continue;
+    }
+
+    let lanPublic = line.match(/LAN\s*Public\s*ip\s*\/\d+\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (lanPublic) {
+      data.lanPublic = lanPublic[1];
+      continue;
+    }
+
+    // Example:
+    // WAN CX600_PKN SW: 10.100.117.240/31
+    // WAN CX600_CTW SW : 10.100.124.106/31
+    let namedWanSw = line.match(/^WAN\s+(.+?)\s+SW\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (namedWanSw) {
+      currentWan = {
+        wan: namedWanSw[2],
+        gatewayName: normalizeDeviceName(namedWanSw[1]),
+        gatewayIp: namedWanSw[2],
+        customerIp: ''
+      };
+      data.wanSwitchBlocks.push(currentWan);
+      continue;
+    }
+
+    // Example:
+    // Wan 1 for switch : 10.100.114.192/26
+    let wanSw = line.match(/^(?:Wan\s*\d*\s*for switch|wan for switch|WAN\s+.+?\s+Switch)\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (wanSw) {
+      currentWan = {
+        wan: wanSw[1],
+        gatewayName: '',
+        gatewayIp: '',
+        customerIp: ''
+      };
+      data.wanSwitchBlocks.push(currentWan);
+      continue;
+    }
+
+    // Example:
+    // CX600_TSM#2 _gateway : 10.100.114.193/26
+    let namedGateway = line.match(/^(.+?)\s*_?\s*gateway\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (namedGateway && currentWan) {
+      currentWan.gatewayName = normalizeDeviceName(namedGateway[1]);
+      currentWan.gatewayIp = namedGateway[2];
+      continue;
+    }
+
+    // Example:
+    // gateway CX600_VPD16 : 10.100.125.1/26
+    // GW-CX600_SYN : 10.100.135.65/26
+    let gw = line.match(/^(?:gateway|gw[-\s]?)(.*?)\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (gw && currentWan) {
+      currentWan.gatewayName = normalizeDeviceName(gw[1]);
+      currentWan.gatewayIp = gw[2];
+      continue;
+    }
+
+    let cust = line.match(/switch\s*\d*\s*for\s*cus(?:tomer|toemr|tomer)?\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (cust && currentWan) {
+      currentWan.customerIp = cust[1];
+      continue;
+    }
+
+    let deviceIp = line.match(/^([A-Z0-9_\-#]+)\s*:?\s*(\d+\.\d+\.\d+\.\d+\/\d+)/i);
+    if (deviceIp && currentWan && !currentWan.gatewayIp) {
+      currentWan.gatewayName = normalizeDeviceName(deviceIp[1]);
+      currentWan.gatewayIp = deviceIp[2];
+      continue;
+    }
+  }
+
+  return data;
+}
+
+function padLabel(label, width = 17) {
+  return label.padEnd(width, ' ');
+}
+
+function renderCommunity(community) {
+  if (!community.length) return [];
+
+  if (community.length === 1) {
+    return [`Community (${community[0].router}) : 65423:${community[0].value}`];
+  }
+
+  return community.map((c, i) => {
+    const label = i === 0 ? 'Community protection' : 'Community Main';
+    return `${label} (${c.router}) : 65423:${c.value}`;
+  });
+}
+
+function render(data) {
+  const out = [];
+
+  out.push(data.customer || 'Cxxxx CUSTOMER NAME');
+  out.push('');
+
+  data.interfaces.forEach(x => out.push(x.text));
+  out.push('');
+
+  const commLines = renderCommunity(data.community);
+  if (commLines.length) {
+    out.push(...commLines);
+    out.push('');
+  }
+
+  if (data.loopback) {
+    out.push(`Loopback sw : ${data.loopback}`);
+    out.push('');
+  }
+
+  data.wanSwitchBlocks.forEach((b) => {
+    out.push(`${padLabel('WAN Switch')} : ${b.wan}`);
+
+    if (b.gatewayName && b.gatewayIp) {
+      out.push(`${padLabel(b.gatewayName)} : ${b.gatewayIp}`);
+    }
+
+    if (b.customerIp) {
+      out.push(`${padLabel('Switch customer')} : ${b.customerIp}`);
+    } else if (b.wan.endsWith('/31')) {
+      out.push(`${padLabel('Switch customer')} : ${peer31(b.wan)}`);
+    }
+
+    out.push('');
+  });
+
+  if (data.wanPublic) {
+    const wan = cidrInfo(data.wanPublic);
+    out.push(`${padLabel('WAN Network')} : ${wan.network}`);
+
+    data.interfaces.forEach((x, i) => {
+      out.push(`${padLabel(x.device)} : ${wan.host(i + 1)}`);
+    });
+
+    out.push(`${padLabel('Router Customer')} : ${wan.host(data.interfaces.length + 1)}`);
+    out.push('');
+  }
+
+  if (data.lanPublic) {
+    const lan = cidrInfo(data.lanPublic);
+
+    out.push(`${padLabel('LAN Network', 14)} : ${lan.network}`);
+    out.push(`${padLabel('LAN Gateway', 14)} : ${lan.host(1)}`);
+    out.push(`${padLabel('Subnet Mask', 14)} : ${lan.mask}`);
+
+    const firstUsableOffset = 2;
+    const lastUsableOffset = lan.usableLastOffset;
+
+    if (lastUsableOffset >= firstUsableOffset) {
+      out.push(`${padLabel('Available IP', 14)} : ${lan.ip(firstUsableOffset)} - ${lan.ip(lastUsableOffset)}`);
+    } else {
+      out.push(`${padLabel('Available IP', 14)} : -`);
+    }
+
+    out.push(`${padLabel('Primary DNS', 14)} : 182.50.80.4`);
+    out.push(`${padLabel('Secondary DNS', 14)} : 182.50.80.5`);
+  }
+
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function convert() {
+  const input = document.getElementById('input').value;
+  const data = parseInput(input);
+  const output = render(data);
+  document.getElementById('output').textContent = output;
+  document.getElementById('status').textContent = 'Converted';
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('status').textContent = 'Copied output';
+  }).catch(() => {
+    document.getElementById('status').textContent = 'Copy failed';
+  });
+}
+
+function clearAll() {
+  document.getElementById('input').value = '';
+  document.getElementById('output').textContent = '';
+  document.getElementById('status').textContent = '';
+}
+
+function loadSample1() {
+  document.getElementById('input').value = `JT-SW1-CX_TSM#2-GigabitEthernet0/0/3
+CX600_PKN-GigabitEthernet0/3/32
+
+C5454 : Sena Development
+
+-Community(cx600_tsm,cx600_bna):15,14
+- Loopback SW : 10.20.25.36/32
+- WAN ip /29 : 172.19.57.8/29
+- LAN Public ip /29 : 203.156.59.8/29
+
+WAN CX600_PKN SW: 10.100.117.240/31
+
+Wan 1 for switch  : 10.100.114.192/26
+        CX600_TSM#2 _gateway : 10.100.114.193/26
+switch 1for customer :   10.100.114.231/26`;
+  convert();
+}
+
+function loadSample2() {
+  document.getElementById('input').value = `JT-SW1-CX_VBVD-GigabitEthernet0/0/26
+JT-SW1-CX_SYN-10GE1/0/26
+C5467: Ark Insights Co.,Ltd.
+
+- Community(cx600_vbvd):32
+ Wan 1 for switch  : 10.100.125.0/26
+        gateway CX600_VPD16 : 10.100.125.1/26
+    switch 1for customer :   10.100.125.22/26
+
+ Wan 1 for switch  : 10.100.135.64/26
+        GW-CX600_SYN :10.100.135.65/26
+    switch 1for customer :   10.100.135.69/26
+
+-    Loopback SW : 10.20.25.38/32
+-    WAN ip /29 : 172.19.57.32/29
+-    LAN Public ip /29 :  203.156.59.48/29`;
+  convert();
+}
+</script>
+</body>
+</html>
