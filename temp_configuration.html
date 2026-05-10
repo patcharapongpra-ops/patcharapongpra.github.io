@@ -376,9 +376,16 @@
   </div>
 </div>
 
+
 <script>
-  const proxyOptions = {
-    "huawei-router": [
+  // ============================================================
+  // CONFIG GENERATOR - REFACTORED SINGLE FILE VERSION
+  // เป้าหมาย: เพิ่มอุปกรณ์ใหม่ง่ายขึ้น โดยแก้หลัก ๆ ที่ DEVICE_PROFILES + template function
+  // ============================================================
+
+  // ---------- Static Data ----------
+  const PROXY_GROUPS = {
+    publicProxy: [
       { value: "", label: "None" },
       { value: "58.82.174.100", label: "PROXY 1" },
       { value: "182.50.80.57",  label: "PROXY 2" },
@@ -391,7 +398,7 @@
       { value: "182.50.80.43",  label: "PROXY 9" },
       { value: "58.82.174.10",  label: "PROXY 10" }
     ],
-    "huawei-switch": [
+    switchProxy: [
       { value: "", label: "None" },
       { value: "10.20.1.201", label: "PROXY 1" },
       { value: "10.20.1.92",  label: "PROXY 2" },
@@ -403,27 +410,97 @@
       { value: "10.20.1.208", label: "PROXY 8" },
       { value: "10.20.1.209", label: "PROXY 9" },
       { value: "10.20.1.10",  label: "PROXY 10" }
-    ],
-    "cisco-4331": [
-      { value: "", label: "None" },
-      { value: "58.82.174.100", label: "PROXY 1" },
-      { value: "182.50.80.57",  label: "PROXY 2" },
-      { value: "58.82.174.23",  label: "PROXY 3" },
-      { value: "182.50.80.27",  label: "PROXY 4" },
-      { value: "182.50.80.7",   label: "PROXY 5" },
-      { value: "182.50.80.41",  label: "PROXY 6" },
-      { value: "58.82.174.4",   label: "PROXY 7" },
-      { value: "58.82.174.8",   label: "PROXY 8" },
-      { value: "182.50.80.43",  label: "PROXY 9" },
-      { value: "58.82.174.10",  label: "PROXY 10" }
     ]
   };
 
+  const DEVICE_PROFILES = {
+    "huawei-router": {
+      label: "AR5710-S (Router)",
+      vendor: "huawei",
+      role: "router",
+      proxyGroup: "publicProxy",
+      wanCustomerOffset: 3,
+      buildConfig: (ctx) => buildHuaweiRouterConfig(ctx, ctx.hasProtect)
+    },
+    "huawei-switch": {
+      label: "S5335-L10T4X-A-V2 (Switch)",
+      vendor: "huawei",
+      role: "switch",
+      proxyGroup: "switchProxy",
+      wanCustomerOffset: 6,
+      buildConfig: (ctx) => buildSwitchConfig(ctx, ctx.hasProtect)
+    },
+    "cisco-4331": {
+      label: "Cisco ISR4331 (Router)",
+      vendor: "cisco",
+      role: "router",
+      proxyGroup: "publicProxy",
+      wanCustomerOffset: 3,
+      buildConfig: (ctx) => buildCiscoConfig(ctx, ctx.hasProtect)
+    }
+  };
+
+  // ---------- Form / UI ----------
+  function getSelectedProfile() {
+    const deviceType = document.getElementById("deviceType").value || "huawei-router";
+    return DEVICE_PROFILES[deviceType] || DEVICE_PROFILES["huawei-router"];
+  }
+
+  function collectFormInput() {
+    const ids = [
+      "deviceType", "Cxxx", "RT_Name", "VLAN", "LOOPBACK", "Name_main", "Name_Protection",
+      "WAN1_IP_NODE", "WAN2_IP_NODE", "WAN1_IP_CustomerSUB1", "WAN2_IP_CustomerSUB2",
+      "WAN_IP_Network", "LAN_IP_Network", "community_main", "community_backup",
+      "Customerfullname", "PROXY"
+    ];
+
+    const input = {};
+    ids.forEach(id => {
+      input[id] = (document.getElementById(id)?.value || "").trim();
+    });
+
+    return {
+      deviceType: input.deviceType,
+      Cxxx: input.Cxxx,
+      RT_Name: input.RT_Name,
+      VLAN: input.VLAN,
+      LOOPBACK: input.LOOPBACK,
+      Name_main_raw: input.Name_main,
+      Name_Protection_raw: input.Name_Protection,
+      WAN1_IP_NODE_raw: input.WAN1_IP_NODE,
+      WAN2_IP_NODE_raw: input.WAN2_IP_NODE,
+      WAN1_IP_CustomerSUB1: input.WAN1_IP_CustomerSUB1,
+      WAN2_IP_CustomerSUB2: input.WAN2_IP_CustomerSUB2,
+      WAN_IP_Network: input.WAN_IP_Network,
+      LAN_IP_Network: input.LAN_IP_Network,
+      community_main: input.community_main,
+      community_backup: input.community_backup,
+      Customerfullname: input.Customerfullname,
+      PROXY: input.PROXY
+    };
+  }
+
+  function populateDeviceOptions() {
+    const select = document.getElementById("deviceType");
+    const current = select.value;
+    select.innerHTML = "";
+
+    Object.entries(DEVICE_PROFILES).forEach(([value, profile]) => {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = profile.label;
+      select.appendChild(opt);
+    });
+
+    if (DEVICE_PROFILES[current]) select.value = current;
+  }
+
   function populateProxyOptions() {
-    const deviceType = document.getElementById("deviceType").value;
+    const profile = getSelectedProfile();
     const select = document.getElementById("PROXY");
     const current = select.value;
-    const opts = proxyOptions[deviceType] || proxyOptions["huawei-router"];
+    const opts = PROXY_GROUPS[profile.proxyGroup] || PROXY_GROUPS.publicProxy;
+
     select.innerHTML = "";
     opts.forEach(o => {
       const opt = document.createElement("option");
@@ -431,275 +508,222 @@
       opt.textContent = o.label + (o.value ? ` (${o.value})` : "");
       select.appendChild(opt);
     });
-    if ([...select.options].some(o => o.value === current)) {
-      select.value = current;
-    }
+
+    if ([...select.options].some(o => o.value === current)) select.value = current;
+  }
+
+  function renderOutput(text) {
+    document.getElementById("output").textContent = text;
+    document.getElementById("outputStatus").textContent = "สร้าง Config แล้ว";
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    populateDeviceOptions();
     populateProxyOptions();
     document.getElementById("deviceType").addEventListener("change", populateProxyOptions);
   });
 
-  function generateConfig() {
-    const deviceType = document.getElementById("deviceType").value || "huawei-router";
+  // ---------- Validation ----------
+  function validateInput(raw) {
+    const required = ["Cxxx", "RT_Name", "VLAN", "LOOPBACK", "Name_main_raw", "WAN1_IP_NODE_raw", "WAN1_IP_CustomerSUB1"];
+    const missing = required.filter(k => !raw[k]);
 
-    let formData = {
-      Cxxx: document.getElementById("Cxxx").value || "",
-      RT_Name: document.getElementById("RT_Name").value || "",
-      VLAN: document.getElementById("VLAN").value || "",
-      LOOPBACK: document.getElementById("LOOPBACK").value || "",
-      Name_main_raw: document.getElementById("Name_main").value || "",
-      Name_Protection_raw: document.getElementById("Name_Protection").value || "",
-      WAN1_IP_NODE_raw: document.getElementById("WAN1_IP_NODE").value || "",
-      WAN1_IP_CustomerSUB1: document.getElementById("WAN1_IP_CustomerSUB1").value || "",
-      WAN2_IP_NODE_raw: document.getElementById("WAN2_IP_NODE").value || "",
-      WAN2_IP_CustomerSUB2: document.getElementById("WAN2_IP_CustomerSUB2").value || "",
-      WAN_IP_Network: document.getElementById("WAN_IP_Network").value || "",
-      LAN_IP_Network: document.getElementById("LAN_IP_Network").value || "",
-      community_main: document.getElementById("community_main").value || "",
-      community_backup: document.getElementById("community_backup").value || "",
-      Customerfullname: document.getElementById("Customerfullname").value || "",
-      PROXY: document.getElementById("PROXY").value || ""
-    };
-
-    // ===== Helpers =====
-    function parseIpCidr(str) {
-      if (!str) return { ip: "", cidr: "" };
-      let parts = str.trim().split(/[\/\s]+/);
-      return { ip: parts[0] || "", cidr: parts[1] || "" };
-    }
-    function toCliMask(str) {
-      let { ip, cidr } = parseIpCidr(str);
-      if (!ip) return "";
-      if (!cidr) return ip;
-      return `${ip} ${cidr}`;
-    }
-    function stripSubnet(str) { return parseIpCidr(str).ip; }
-    function cidrToMask(cidr) {
-      cidr = Number(cidr);
-      if (!Number.isInteger(cidr) || cidr < 0 || cidr > 32) return "";
-      let mask=[],bits=cidr;
-      for (let i=0;i<4;i++){
-        let take=Math.min(8,bits);
-        let oct=take===0?0:(0xff<<(8-take))&0xff;
-        mask.push(oct);
-        bits-=take;
-      }
-      return mask.join(".");
-    }
-    function addToIp(ip, increment) {
-      if (!ip) return "";
-      let o = ip.split(".").map(Number);
-      if (o.length!==4 || o.some(n=>isNaN(n))) return ip;
-      let carry = increment;
-      for (let i=3;i>=0 && carry!==0;i--){
-        let val=o[i]+carry;
-        o[i]=val%256;
-        carry=Math.floor(val/256);
-      }
-      return o.join(".");
-    }
-    function getGateway(str) {
-      if (!str) return "";
-      let { ip, cidr } = parseIpCidr(str);
-      if (!ip) return "";
-      let o = ip.split(".").map(Number);
-      if (o.length!==4 || o.some(n=>isNaN(n))) return str.trim();
-      if (o[3]<255) o[3]+=1;
-      let gwIp = o.join(".");
-      return cidr ? `${gwIp} ${cidr}` : gwIp;
+    if (missing.length) {
+      return {
+        ok: false,
+        message: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ: " + missing.join(", ")
+      };
     }
 
-    // ตัด prefix + ลบ # สำหรับชื่อ node
-    function normalizeNodeName(raw) {
-      if (!raw) return "";
-      let name = raw.trim();
-      const patterns = [
-        /^CX600_/i,
-        /^JT-SW2-CX_/i,
-        /^JT-SW1-CX_/i,
-        /^JT-M4-/i,
-        /^ATN950B_/i,
-        /^ATN910C_/i
-      ];
-      patterns.forEach(re => { name = name.replace(re, ""); });
-      return name.replace(/#/g, "");
+    if (raw.VLAN && !/^\d+$/.test(raw.VLAN)) {
+      return { ok: false, message: "VLAN ต้องเป็นตัวเลข" };
     }
 
-    function parseNode(raw){
-      if(!raw) return {node:"",iface:""};
-      let p=raw.trim().split(/\s+/);
-      return {node:p[0]||"",iface:p[1]||""};
-    }
-    function buildDescriptionFromParsed(p){
-      if(!p.node||!p.iface) return "";
-      return `[NODE]:TO:[${p.node}]<VIA>[JAS]:[${p.iface}]`;
-    }
+    return { ok: true, message: "" };
+  }
 
-    // แปลงชื่อ interface ฝั่ง Node (เช่น GE0/3/20 => GigabitEthernet0/3/20)
-    function toNodeIface(iface) {
-      if (!iface) return "";
-      let s = iface.trim();
-      s = s.replace(/^10GE/i, "10GigabitEthernet");
-      s = s.replace(/^GE/i, "GigabitEthernet");
-      return s;
-    }
+  // ---------- IP / String Helpers ----------
+  function parseIpCidr(str) {
+    if (!str) return { ip: "", cidr: "" };
+    const parts = str.trim().split(/[\/\s]+/);
+    return { ip: parts[0] || "", cidr: parts[1] || "" };
+  }
 
-    // ===== CID rule (.124 / .123) =====
-    const cidTrim = (formData.Cxxx || "").trim();
+  function toCliMask(str) {
+    const { ip, cidr } = parseIpCidr(str);
+    if (!ip) return "";
+    if (!cidr) return ip;
+    return `${ip} ${cidr}`;
+  }
+
+  function stripSubnet(str) {
+    return parseIpCidr(str).ip;
+  }
+
+  function cidrToMask(cidr) {
+    cidr = Number(cidr);
+    if (!Number.isInteger(cidr) || cidr < 0 || cidr > 32) return "";
+    const mask = [];
+    let bits = cidr;
+    for (let i = 0; i < 4; i++) {
+      const take = Math.min(8, bits);
+      const oct = take === 0 ? 0 : (0xff << (8 - take)) & 0xff;
+      mask.push(oct);
+      bits -= take;
+    }
+    return mask.join(".");
+  }
+
+  function addToIp(ip, increment) {
+    if (!ip) return "";
+    const o = ip.split(".").map(Number);
+    if (o.length !== 4 || o.some(n => Number.isNaN(n))) return ip;
+
+    let carry = increment;
+    for (let i = 3; i >= 0 && carry !== 0; i--) {
+      const val = o[i] + carry;
+      o[i] = ((val % 256) + 256) % 256;
+      carry = Math.floor(val / 256);
+    }
+    return o.join(".");
+  }
+
+  function getGateway(str) {
+    if (!str) return "";
+    const { ip, cidr } = parseIpCidr(str);
+    if (!ip) return "";
+
+    const o = ip.split(".").map(Number);
+    if (o.length !== 4 || o.some(n => Number.isNaN(n))) return str.trim();
+    if (o[3] < 255) o[3] += 1;
+
+    const gwIp = o.join(".");
+    return cidr ? `${gwIp} ${cidr}` : gwIp;
+  }
+
+  function normalizeNodeName(raw) {
+    if (!raw) return "";
+    let name = raw.trim();
+    [
+      /^CX600_/i,
+      /^JT-SW2-CX_/i,
+      /^JT-SW1-CX_/i,
+      /^JT-M4-/i,
+      /^ATN950B_/i,
+      /^ATN910C_/i
+    ].forEach(re => { name = name.replace(re, ""); });
+    return name.replace(/#/g, "");
+  }
+
+  function parseNode(raw) {
+    if (!raw) return { node: "", iface: "" };
+    const p = raw.trim().split(/\s+/);
+    return { node: p[0] || "", iface: p[1] || "" };
+  }
+
+  function buildDescriptionFromParsed(p) {
+    if (!p.node || !p.iface) return "";
+    return `[NODE]:TO:[${p.node}]<VIA>[JAS]:[${p.iface}]`;
+  }
+
+  function toNodeIface(iface) {
+    if (!iface) return "";
+    let s = iface.trim();
+    s = s.replace(/^10GE/i, "10GigabitEthernet");
+    s = s.replace(/^GE/i, "GigabitEthernet");
+    return s;
+  }
+
+  // ---------- Context Builder ----------
+  function buildContext(raw, profile) {
+    const ctx = { ...raw };
+    const cidTrim = (ctx.Cxxx || "").trim();
     const isP = /^P/i.test(cidTrim);
-    const mgmtDot1q = isP ? "123" : "124";
-    formData.MGMT_VLAN = mgmtDot1q;
 
-    // mask ตาม / ของ MGMT (node) ทั้งสองเส้น
-    const wan1Node = parseIpCidr(formData.WAN1_IP_NODE_raw);
-    const wan2Node = parseIpCidr(formData.WAN2_IP_NODE_raw);
-    formData.WAN1_NODE_MASK = cidrToMask(wan1Node.cidr);
-    formData.WAN2_NODE_MASK = cidrToMask(wan2Node.cidr);
+    ctx.profile = profile;
+    ctx.MGMT_VLAN = isP ? "123" : "124";
 
-    // ===== Pre-compute =====
-    formData.WAN1_IP_CustomerSUB1_cli = toCliMask(formData.WAN1_IP_CustomerSUB1);
-    formData.WAN2_IP_CustomerSUB2_cli = toCliMask(formData.WAN2_IP_CustomerSUB2);
+    const wan1Node = parseIpCidr(ctx.WAN1_IP_NODE_raw);
+    const wan2Node = parseIpCidr(ctx.WAN2_IP_NODE_raw);
+    ctx.WAN1_NODE_MASK = cidrToMask(wan1Node.cidr);
+    ctx.WAN2_NODE_MASK = cidrToMask(wan2Node.cidr);
 
-    formData.WAN1_IP_NODE = stripSubnet(formData.WAN1_IP_NODE_raw);
-    formData.WAN2_IP_NODE = stripSubnet(formData.WAN2_IP_NODE_raw);
-    formData.WAN1_IP_Customer = stripSubnet(formData.WAN1_IP_CustomerSUB1);
-    formData.WAN2_IP_Customer = stripSubnet(formData.WAN2_IP_CustomerSUB2);
+    ctx.WAN1_IP_CustomerSUB1_cli = toCliMask(ctx.WAN1_IP_CustomerSUB1);
+    ctx.WAN2_IP_CustomerSUB2_cli = toCliMask(ctx.WAN2_IP_CustomerSUB2);
 
-    formData.LAN_IP_Gateway = getGateway(formData.LAN_IP_Network);
+    ctx.WAN1_IP_NODE = stripSubnet(ctx.WAN1_IP_NODE_raw);
+    ctx.WAN2_IP_NODE = stripSubnet(ctx.WAN2_IP_NODE_raw);
+    ctx.WAN1_IP_Customer = stripSubnet(ctx.WAN1_IP_CustomerSUB1);
+    ctx.WAN2_IP_Customer = stripSubnet(ctx.WAN2_IP_CustomerSUB2);
 
-    // WAN base + offset
-    if (formData.WAN_IP_Network) {
-      let { ip: baseIp, cidr: wanCidr } = parseIpCidr(formData.WAN_IP_Network);
-      if (baseIp) {
-        const isSwitch = (deviceType === "huawei-switch");
-        // Router: +3, Switch: +6
-        formData.Wan_IP_Customer_RT  = addToIp(baseIp, isSwitch ? 6 : 3);
-        formData.WAN_IP_MAIN         = addToIp(baseIp, 1);
-        formData.WAN_IP_PROTECTION   = addToIp(baseIp, 2);
+    ctx.LAN_IP_Gateway = getGateway(ctx.LAN_IP_Network);
 
-        const wanMask = cidrToMask(wanCidr);
-        formData.WAN_IP_Mask = wanMask || "";
-        formData.Wan_IP_Customer_RT_withMask =
-          (formData.Wan_IP_Customer_RT && wanMask)
-            ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
-            : formData.Wan_IP_Customer_RT;
+    const wanNet = parseIpCidr(ctx.WAN_IP_Network);
+    const wanMask = cidrToMask(wanNet.cidr);
+    const offset = profile.wanCustomerOffset ?? 3;
 
-        formData.Wan_IP_Customer_RT_mask =
-          (formData.Wan_IP_Customer_RT && wanMask)
-            ? `${formData.Wan_IP_Customer_RT} ${wanMask}`
-            : "";
+    ctx.Wan_IP_Customer_RT = wanNet.ip ? addToIp(wanNet.ip, offset) : "";
+    ctx.WAN_IP_MAIN = wanNet.ip ? addToIp(wanNet.ip, 1) : "";
+    ctx.WAN_IP_PROTECTION = wanNet.ip ? addToIp(wanNet.ip, 2) : "";
+    ctx.WAN_IP_Mask = wanMask || "";
+    ctx.Wan_IP_Customer_RT_withMask = (ctx.Wan_IP_Customer_RT && wanMask) ? `${ctx.Wan_IP_Customer_RT} ${wanMask}` : ctx.Wan_IP_Customer_RT;
+    ctx.Wan_IP_Customer_RT_mask = (ctx.Wan_IP_Customer_RT && wanMask) ? `${ctx.Wan_IP_Customer_RT} ${wanMask}` : "";
+    ctx.WAN_NET_IP = wanNet.ip || "";
+    ctx.WAN_NET_MASK = wanMask || "";
+    ctx.WAN_IP_Network_mask = (wanNet.ip && wanMask) ? `${wanNet.ip} ${wanMask}` : "";
 
-        // Cisco wants: network <ip> mask <mask>
-        formData.WAN_NET_IP   = baseIp || "";
-        formData.WAN_NET_MASK = wanMask || "";
+    const lanNet = parseIpCidr(ctx.LAN_IP_Network);
+    const lanMask = cidrToMask(lanNet.cidr);
+    ctx.LAN_NET_IP = lanNet.ip || "";
+    ctx.LAN_NET_MASK = lanMask || "";
+    ctx.LAN_IP_Network_mask = (lanNet.ip && lanMask) ? `${lanNet.ip} ${lanMask}` : "";
 
-        // (คงไว้สำหรับที่อื่น)
-        formData.WAN_IP_Network_mask = (baseIp && wanMask) ? `${baseIp} ${wanMask}` : "";
-      } else {
-        formData.Wan_IP_Customer_RT = "";
-        formData.Wan_IP_Customer_RT_mask = "";
-        formData.WAN_IP_MAIN = "";
-        formData.WAN_IP_PROTECTION = "";
-        formData.WAN_IP_Network_mask = "";
-        formData.WAN_NET_IP = "";
-        formData.WAN_NET_MASK = "";
-        formData.WAN_IP_Mask = "";
-        formData.Wan_IP_Customer_RT_withMask = "";
-      }
-    } else {
-      formData.Wan_IP_Customer_RT = "";
-      formData.Wan_IP_Customer_RT_mask = "";
-      formData.WAN_IP_MAIN = "";
-      formData.WAN_IP_PROTECTION = "";
-      formData.WAN_IP_Network_mask = "";
-      formData.WAN_NET_IP = "";
-      formData.WAN_NET_MASK = "";
-      formData.WAN_IP_Mask = "";
-      formData.Wan_IP_Customer_RT_withMask = "";
-    }
+    const lanGateway = parseIpCidr(ctx.LAN_IP_Gateway);
+    const lanGwMask = cidrToMask(lanGateway.cidr);
+    ctx.LAN_IP_Gateway_mask = (lanGateway.ip && lanGwMask) ? `${lanGateway.ip} ${lanGwMask}` : "";
 
-    // Cisco: LAN network + mask (for "network ... mask ...")
-    if (formData.LAN_IP_Network) {
-      let { ip: lanBase, cidr: lanCidr } = parseIpCidr(formData.LAN_IP_Network);
-      const lanMask = cidrToMask(lanCidr);
+    const mainParsed = parseNode(ctx.Name_main_raw);
+    const protParsed = parseNode(ctx.Name_Protection_raw);
+    ctx.hasProtect = !!(ctx.Name_Protection_raw && ctx.WAN2_IP_NODE_raw && ctx.WAN2_IP_CustomerSUB2);
 
-      formData.LAN_NET_IP   = lanBase || "";
-      formData.LAN_NET_MASK = lanMask || "";
+    ctx.Name_main_only = normalizeNodeName(mainParsed.node);
+    ctx.Name_Protection_only = normalizeNodeName(protParsed.node);
+    ctx.DES1_built = buildDescriptionFromParsed(mainParsed);
+    ctx.DES2_built = ctx.hasProtect ? buildDescriptionFromParsed(protParsed) : "";
 
-      // (คงไว้สำหรับที่อื่น)
-      formData.LAN_IP_Network_mask = (lanBase && lanMask) ? `${lanBase} ${lanMask}` : "";
-    } else {
-      formData.LAN_NET_IP = "";
-      formData.LAN_NET_MASK = "";
-      formData.LAN_IP_Network_mask = "";
-    }
+    return ctx;
+  }
 
-    // Cisco: LAN gateway ip + mask (ip address X Y)
-    if (formData.LAN_IP_Gateway) {
-      let { ip: lanGwIp, cidr: lanGwCidr } = parseIpCidr(formData.LAN_IP_Gateway);
-      const lanGwMask = cidrToMask(lanGwCidr);
-      formData.LAN_IP_Gateway_mask = (lanGwIp && lanGwMask) ? `${lanGwIp} ${lanGwMask}` : "";
-    } else {
-      formData.LAN_IP_Gateway_mask = "";
-    }
+  // ---------- Preconfig Builder ----------
+  function buildPreconfigNodeSection(ctx) {
+    const cid = (ctx.Cxxx || "").trim();
+    const rt = (ctx.RT_Name || "").trim();
+    const vlanSvc = (ctx.VLAN || "").trim();
+    const loop = (ctx.LOOPBACK || "").trim();
+    const isPcid = /^P/i.test(cid);
 
-    // Nodes & descriptions
-    const mainParsed = parseNode(formData.Name_main_raw);
-    const protParsed = parseNode(formData.Name_Protection_raw);
-    const hasProtect =
-      !!(formData.Name_Protection_raw && formData.WAN2_IP_NODE_raw && formData.WAN2_IP_CustomerSUB2);
+    const mNode = parseNode(ctx.Name_main_raw);
+    const pNode = parseNode(ctx.Name_Protection_raw);
 
-    formData.Name_main_only       = normalizeNodeName(mainParsed.node);
-    formData.Name_Protection_only = normalizeNodeName(protParsed.node);
+    const mNodeName = (mNode.node || "").trim();
+    const pNodeName = (pNode.node || "").trim();
+    const mIface = toNodeIface(mNode.iface || "");
+    const pIface = toNodeIface(pNode.iface || "");
 
-    formData.DES1_built = buildDescriptionFromParsed(mainParsed);
-    formData.DES2_built = hasProtect ? buildDescriptionFromParsed(protParsed) : "";
+    const mNodeIp = stripSubnet(ctx.WAN1_IP_NODE_raw);
+    const mRtIp = stripSubnet(ctx.WAN1_IP_CustomerSUB1);
+    const pNodeIp = stripSubnet(ctx.WAN2_IP_NODE_raw);
+    const pRtIp = stripSubnet(ctx.WAN2_IP_CustomerSUB2);
 
-    // ===== Preconfig Node =====
-    function buildPreconfigNodeSection() {
-      const cid = (formData.Cxxx || "").trim();
-      const rt  = (formData.RT_Name || "").trim();
-      const vlanSvc = (formData.VLAN || "").trim();
-      const loop = (formData.LOOPBACK || "").trim();
-      const isPcid = /^P/i.test(cid);
+    const includeL3vpn = !isPcid;
+    const wanNet = parseIpCidr(ctx.WAN_IP_Network);
+    const wanMask = cidrToMask(wanNet.cidr);
+    const descBase = `:${cid}:${rt}`;
 
-      const mNode = parseNode(formData.Name_main_raw);
-      const pNode = parseNode(formData.Name_Protection_raw);
-
-      const mNodeName = (mNode.node || "").trim();
-      const pNodeName = (pNode.node || "").trim();
-      const mIface = toNodeIface(mNode.iface || "");
-      const pIface = toNodeIface(pNode.iface || "");
-
-      const hasProtectLocal =
-        !!(formData.Name_Protection_raw && formData.WAN2_IP_NODE_raw && formData.WAN2_IP_CustomerSUB2);
-
-      const mNodeIp = stripSubnet(formData.WAN1_IP_NODE_raw);
-      const mRtIp   = stripSubnet(formData.WAN1_IP_CustomerSUB1);
-      const pNodeIp = stripSubnet(formData.WAN2_IP_NODE_raw);
-      const pRtIp   = stripSubnet(formData.WAN2_IP_CustomerSUB2);
-
-      const mMask = formData.WAN1_NODE_MASK || "";
-      const pMask = formData.WAN2_NODE_MASK || "";
-
-      // L3VPN only for CID starts with C
-      const includeL3vpn = !isPcid;
-
-      const wanNet = parseIpCidr(formData.WAN_IP_Network);
-      const wanMask = cidrToMask(wanNet.cidr);
-
-      const l3MainIp = formData.WAN_IP_MAIN || "";
-      const l3ProtIp = formData.WAN_IP_PROTECTION || "";
-      const l3PeerIp = formData.Wan_IP_Customer_RT || "";
-
-      const descBase = `:${cid}:${rt}`;
-
-      function l3Block(nodeIf, nodeL3Ip) {
-        if (!includeL3vpn) return "";
-        if (!vlanSvc || !nodeIf || !nodeL3Ip || !wanMask || !l3PeerIp) return "";
-        return `
+    function l3Block(nodeIf, nodeL3Ip) {
+      if (!includeL3vpn) return "";
+      if (!vlanSvc || !nodeIf || !nodeL3Ip || !wanMask || !ctx.Wan_IP_Customer_RT) return "";
+      return `
 #
 ip vpn-instance ${vlanSvc}
  description :${cid}:${rt}
@@ -720,22 +744,22 @@ interface ${nodeIf}.${vlanSvc}
 bgp 65423
  ipv4-family vpn-instance ${vlanSvc}
   import-route direct
-  peer ${l3PeerIp} as-number 65001
-  peer ${l3PeerIp} description :${cid}:${rt}
-  peer ${l3PeerIp} ebgp-max-hop 5
-  peer ${l3PeerIp} connect-interface ${nodeIf}.${vlanSvc}
-  peer ${l3PeerIp} bfd enable
-  peer ${l3PeerIp} route-policy rp_customer_l3vpn_in import
-  peer ${l3PeerIp} route-policy rp_customer_l3vpn_out export
-  peer ${l3PeerIp} route-limit 10 80 alert-only
-  peer ${l3PeerIp} advertise-community
+  peer ${ctx.Wan_IP_Customer_RT} as-number 65001
+  peer ${ctx.Wan_IP_Customer_RT} description :${cid}:${rt}
+  peer ${ctx.Wan_IP_Customer_RT} ebgp-max-hop 5
+  peer ${ctx.Wan_IP_Customer_RT} connect-interface ${nodeIf}.${vlanSvc}
+  peer ${ctx.Wan_IP_Customer_RT} bfd enable
+  peer ${ctx.Wan_IP_Customer_RT} route-policy rp_customer_l3vpn_in import
+  peer ${ctx.Wan_IP_Customer_RT} route-policy rp_customer_l3vpn_out export
+  peer ${ctx.Wan_IP_Customer_RT} route-limit 10 80 alert-only
+  peer ${ctx.Wan_IP_Customer_RT} advertise-community
 #`;
-      }
+    }
 
-      function jtExtraBlock(nodeName, nodeIf) {
-        if (!/^JT/i.test(nodeName || "")) return "";
-        if (!vlanSvc || !nodeIf) return "";
-        return `
+    function jtExtraBlock(nodeName, nodeIf) {
+      if (!/^JT/i.test(nodeName || "")) return "";
+      if (!vlanSvc || !nodeIf) return "";
+      return `
 vlan ${vlanSvc}
 name "${cid}:${rt}"
 
@@ -747,17 +771,16 @@ interface ${nodeIf}
  description :${cid}:${rt}
  port link-type trunk
  undo port trunk allow-pass vlan 1
- port trunk allow-pass vlan ${formData.MGMT_VLAN} ${vlanSvc}
+ port trunk allow-pass vlan ${ctx.MGMT_VLAN} ${vlanSvc}
 `;
-      }
+    }
 
-      function mgmtBlock(nodeIf, nodeNodeIp, nodeMask, nodeRtIp, nqaId) {
-        if (!nodeIf || !nodeNodeIp || !nodeMask || !nodeRtIp) return "";
-        if (!loop) return "";
-        return `
+    function mgmtBlock(nodeIf, nodeNodeIp, nodeMask, nodeRtIp, nqaId) {
+      if (!nodeIf || !nodeNodeIp || !nodeMask || !nodeRtIp || !loop) return "";
+      return `
 #
-interface ${nodeIf}.${formData.MGMT_VLAN}
- vlan-type dot1q ${formData.MGMT_VLAN}
+interface ${nodeIf}.${ctx.MGMT_VLAN}
+ vlan-type dot1q ${ctx.MGMT_VLAN}
  description ${descBase}
  ip binding vpn-instance __dcn_vpn__
  ip address ${nodeNodeIp} ${nodeMask}
@@ -773,49 +796,49 @@ nqa test-instance ${cid} ${nqaId}
 #
 ip route-static vpn-instance __dcn_vpn__ ${loop} 32 ${nodeRtIp} track nqa ${cid} ${nqaId}
 #`;
-      }
+    }
 
-      let out = `===== PRECONFIG NODE =====`;
+    let out = `===== PRECONFIG NODE =====`;
 
-      if (mNodeName && mIface) {
-        out += `
+    if (mNodeName && mIface) {
+      out += `
 NODE ${mNodeName}
-${mgmtBlock(mIface, mNodeIp, mMask, mRtIp, 1)}
-${l3Block(mIface, l3MainIp)}
+${mgmtBlock(mIface, mNodeIp, ctx.WAN1_NODE_MASK, mRtIp, 1)}
+${l3Block(mIface, ctx.WAN_IP_MAIN)}
 ${jtExtraBlock(mNodeName, mIface)}`.trimEnd();
-      }
+    }
 
-      if (hasProtectLocal && pNodeName && pIface) {
-        out += `
-
-NODE ${pNodeName}
-${mgmtBlock(pIface, pNodeIp, pMask, pRtIp, 2)}
-${l3Block(pIface, l3ProtIp)}
-${jtExtraBlock(pNodeName, pIface)}`.trimEnd();
-      }
-
+    if (ctx.hasProtect && pNodeName && pIface) {
       out += `
 
+NODE ${pNodeName}
+${mgmtBlock(pIface, pNodeIp, ctx.WAN2_NODE_MASK, pRtIp, 2)}
+${l3Block(pIface, ctx.WAN_IP_PROTECTION)}
+${jtExtraBlock(pNodeName, pIface)}`.trimEnd();
+    }
+
+    out += `
+
 ===== END PRECONFIG NODE =====`;
-      return out;
+    return out;
+  }
+
+  // ---------- Main Flow ----------
+  function generateConfig() {
+    const raw = collectFormInput();
+    const profile = DEVICE_PROFILES[raw.deviceType] || DEVICE_PROFILES["huawei-router"];
+    const validation = validateInput(raw);
+
+    if (!validation.ok) {
+      document.getElementById("output").textContent = validation.message;
+      document.getElementById("outputStatus").textContent = "ข้อมูลยังไม่ครบ";
+      return;
     }
 
-    const preconfigNodeText = buildPreconfigNodeSection();
-
-    // ===== Build original config =====
-    let textTemplate;
-    if (deviceType === "huawei-switch") {
-      textTemplate = buildSwitchConfig(formData, hasProtect);
-    } else if (deviceType === "cisco-4331") {
-      textTemplate = buildCiscoConfig(formData, hasProtect);
-    } else {
-      textTemplate = buildHuaweiRouterConfig(formData, hasProtect);
-    }
-
-    const finalOutput = `${preconfigNodeText}\n\n${textTemplate}`.trim();
-
-    document.getElementById("output").textContent = finalOutput;
-    document.getElementById("outputStatus").textContent = "สร้าง Config แล้ว";
+    const ctx = buildContext(raw, profile);
+    const preconfigNodeText = buildPreconfigNodeSection(ctx);
+    const deviceConfig = profile.buildConfig(ctx);
+    renderOutput(`${preconfigNodeText}\n\n${deviceConfig}`.trim());
   }
 
   // ===== HUAWEI ROUTER =====
